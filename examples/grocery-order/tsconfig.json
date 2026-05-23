@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "whatsapp-flow-tsx",
+    "paths": {
+      "whatsapp-flow-tsx": ["../../packages/whatsapp-flow-tsx/src/index.ts"],
+      "whatsapp-flow-tsx/jsx-runtime": [
+        "../../packages/whatsapp-flow-tsx/src/jsx-runtime.ts"
+      ]
+    }
+  },
+  "include": ["flow.config.ts", "screens"]
+}

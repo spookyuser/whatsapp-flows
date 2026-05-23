@@ -1,0 +1,377 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`component coverage > produces a stable snapshot for the all-components flow 1`] = `
+{
+  "data_api_version": "3.0",
+  "routing_model": {
+    "DONE": [],
+    "MENU": [
+      "DONE",
+    ],
+    "START": [
+      "UPLOAD",
+    ],
+    "UPLOAD": [
+      "MENU",
+    ],
+  },
+  "screens": [
+    {
+      "id": "START",
+      "layout": {
+        "children": [
+          {
+            "text": "Heading",
+            "type": "TextHeading",
+          },
+          {
+            "text": "Subheading",
+            "type": "TextSubheading",
+          },
+          {
+            "font-weight": "bold",
+            "markdown": true,
+            "strikethrough": false,
+            "text": "Body text",
+            "type": "TextBody",
+          },
+          {
+            "text": "Caption",
+            "type": "TextCaption",
+          },
+          {
+            "text": [
+              "# Title",
+              "Some **bold** text",
+            ],
+            "type": "RichText",
+          },
+          {
+            "alt-text": "dot",
+            "height": 200,
+            "scale-type": "contain",
+            "src": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+            "type": "Image",
+            "width": 200,
+          },
+          {
+            "images": [
+              {
+                "alt-text": "one",
+                "src": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+              },
+              {
+                "alt-text": "two",
+                "src": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+              },
+            ],
+            "scale-type": "cover",
+            "type": "ImageCarousel",
+          },
+          {
+            "on-click-action": {
+              "name": "open_url",
+              "url": "https://example.com/info",
+            },
+            "text": "Learn more",
+            "type": "EmbeddedLink",
+          },
+          {
+            "children": [
+              {
+                "input-type": "text",
+                "label": "Name",
+                "name": "full_name",
+                "pattern": ".+",
+                "required": true,
+                "type": "TextInput",
+              },
+              {
+                "label": "Notes",
+                "max-length": 500,
+                "name": "notes",
+                "type": "TextArea",
+              },
+              {
+                "data-source": [
+                  {
+                    "id": "s",
+                    "title": "Small",
+                  },
+                  {
+                    "id": "m",
+                    "title": "Medium",
+                  },
+                  {
+                    "id": "l",
+                    "title": "Large",
+                  },
+                ],
+                "label": "Size",
+                "name": "size",
+                "on-select-action": {
+                  "name": "update_data",
+                  "payload": {
+                    "chosen_size": "\${form.size}",
+                  },
+                },
+                "type": "Dropdown",
+              },
+              {
+                "data-source": [
+                  {
+                    "id": "red",
+                    "title": "Red",
+                  },
+                  {
+                    "id": "blue",
+                    "title": "Blue",
+                  },
+                ],
+                "label": "Color",
+                "media-size": "regular",
+                "name": "color",
+                "type": "RadioButtonsGroup",
+              },
+              {
+                "data-source": [
+                  {
+                    "id": "cheese",
+                    "title": "Cheese",
+                  },
+                  {
+                    "id": "olives",
+                    "title": "Olives",
+                  },
+                ],
+                "init-value": [
+                  "cheese",
+                ],
+                "label": "Toppings",
+                "max-selected-items": 3,
+                "min-selected-items": 1,
+                "name": "toppings",
+                "type": "CheckboxGroup",
+              },
+              {
+                "data-source": [
+                  {
+                    "id": "fast",
+                    "title": "Fast",
+                  },
+                  {
+                    "id": "gift",
+                    "title": "Gift wrap",
+                  },
+                ],
+                "label": "Extras",
+                "max-selected-items": 2,
+                "name": "extras",
+                "type": "ChipsSelector",
+              },
+              {
+                "label": "Delivery date",
+                "min-date": "2026-01-01",
+                "name": "delivery_date",
+                "type": "DatePicker",
+              },
+              {
+                "label": "Stay",
+                "mode": "range",
+                "name": "stay",
+                "type": "CalendarPicker",
+              },
+              {
+                "label": "I agree to the terms",
+                "name": "tos",
+                "on-click-action": {
+                  "name": "open_url",
+                  "url": "https://example.com/terms",
+                },
+                "required": true,
+                "type": "OptIn",
+              },
+              {
+                "condition": "\${form.tos}",
+                "else": [
+                  {
+                    "text": "Please agree to continue.",
+                    "type": "TextCaption",
+                  },
+                ],
+                "then": [
+                  {
+                    "text": "Thanks for agreeing.",
+                    "type": "TextBody",
+                  },
+                ],
+                "type": "If",
+              },
+              {
+                "cases": {
+                  "blue": [
+                    {
+                      "text": "You picked blue",
+                      "type": "TextBody",
+                    },
+                  ],
+                  "red": [
+                    {
+                      "text": "You picked red",
+                      "type": "TextBody",
+                    },
+                  ],
+                },
+                "type": "Switch",
+                "value": "\${form.color}",
+              },
+              {
+                "label": "Continue",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "name": "UPLOAD",
+                    "type": "screen",
+                  },
+                  "payload": {
+                    "full_name": "\${form.full_name}",
+                  },
+                },
+                "type": "Footer",
+              },
+            ],
+            "name": "form",
+            "type": "Form",
+          },
+        ],
+        "type": "SingleColumnLayout",
+      },
+      "title": "Everything",
+    },
+    {
+      "data": {
+        "full_name": {
+          "__example__": "Sam",
+          "type": "string",
+        },
+      },
+      "id": "UPLOAD",
+      "layout": {
+        "children": [
+          {
+            "children": [
+              {
+                "label": "Upload photos",
+                "max-file-size-kb": 10240,
+                "max-uploaded-photos": 5,
+                "min-uploaded-photos": 1,
+                "name": "photos",
+                "photo-source": "camera_gallery",
+                "type": "PhotoPicker",
+              },
+              {
+                "allowed-mime-types": [
+                  "application/pdf",
+                ],
+                "label": "Upload documents",
+                "max-file-size-kb": 5120,
+                "name": "docs",
+                "type": "DocumentPicker",
+              },
+              {
+                "label": "Upload",
+                "on-click-action": {
+                  "name": "data_exchange",
+                  "payload": {
+                    "action": "processUploads",
+                    "photos": "\${form.photos}",
+                  },
+                },
+                "type": "Footer",
+              },
+            ],
+            "name": "form",
+            "type": "Form",
+          },
+        ],
+        "type": "SingleColumnLayout",
+      },
+      "title": "Upload",
+    },
+    {
+      "id": "MENU",
+      "layout": {
+        "children": [
+          {
+            "text": "Pick an option",
+            "type": "TextHeading",
+          },
+          {
+            "label": "Options",
+            "list-items": [
+              {
+                "id": "a",
+                "main-content": {
+                  "description": "First",
+                  "metadata": "meta",
+                  "title": "Option A",
+                },
+                "tags": [
+                  "new",
+                ],
+              },
+              {
+                "id": "b",
+                "main-content": {
+                  "description": "Second",
+                  "title": "Option B",
+                },
+              },
+            ],
+            "media-size": "large",
+            "name": "menu",
+            "on-click-action": {
+              "name": "navigate",
+              "next": {
+                "name": "DONE",
+                "type": "screen",
+              },
+            },
+            "type": "NavigationList",
+          },
+        ],
+        "type": "SingleColumnLayout",
+      },
+      "title": "Choose",
+    },
+    {
+      "id": "DONE",
+      "layout": {
+        "children": [
+          {
+            "children": [
+              {
+                "text": "Thanks! Your submission is complete.",
+                "type": "TextBody",
+              },
+              {
+                "label": "Finish",
+                "on-click-action": {
+                  "name": "complete",
+                },
+                "type": "Footer",
+              },
+            ],
+            "name": "form",
+            "type": "Form",
+          },
+        ],
+        "type": "SingleColumnLayout",
+      },
+      "terminal": true,
+      "title": "All done",
+    },
+  ],
+  "version": "7.3",
+}
+`;

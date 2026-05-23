@@ -1,0 +1,373 @@
+{
+  "version": "7.3",
+  "data_api_version": "3.0",
+  "routing_model": {
+    "START": [
+      "UPLOAD"
+    ],
+    "UPLOAD": [
+      "MENU"
+    ],
+    "MENU": [
+      "DONE"
+    ],
+    "DONE": []
+  },
+  "screens": [
+    {
+      "id": "START",
+      "title": "Everything",
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Heading"
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Subheading"
+          },
+          {
+            "type": "TextBody",
+            "text": "Body text",
+            "markdown": true,
+            "font-weight": "bold",
+            "strikethrough": false
+          },
+          {
+            "type": "TextCaption",
+            "text": "Caption"
+          },
+          {
+            "type": "RichText",
+            "text": [
+              "# Title",
+              "Some **bold** text"
+            ]
+          },
+          {
+            "type": "Image",
+            "src": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+            "width": 200,
+            "height": 200,
+            "scale-type": "contain",
+            "alt-text": "dot"
+          },
+          {
+            "type": "ImageCarousel",
+            "images": [
+              {
+                "src": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+                "alt-text": "one"
+              },
+              {
+                "src": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+                "alt-text": "two"
+              }
+            ],
+            "scale-type": "cover"
+          },
+          {
+            "type": "EmbeddedLink",
+            "text": "Learn more",
+            "on-click-action": {
+              "name": "open_url",
+              "url": "https://example.com/info"
+            }
+          },
+          {
+            "type": "Form",
+            "name": "form",
+            "children": [
+              {
+                "type": "TextInput",
+                "name": "full_name",
+                "label": "Name",
+                "input-type": "text",
+                "pattern": ".+",
+                "required": true
+              },
+              {
+                "type": "TextArea",
+                "name": "notes",
+                "label": "Notes",
+                "max-length": 500
+              },
+              {
+                "type": "Dropdown",
+                "name": "size",
+                "label": "Size",
+                "data-source": [
+                  {
+                    "id": "s",
+                    "title": "Small"
+                  },
+                  {
+                    "id": "m",
+                    "title": "Medium"
+                  },
+                  {
+                    "id": "l",
+                    "title": "Large"
+                  }
+                ],
+                "on-select-action": {
+                  "name": "update_data",
+                  "payload": {
+                    "chosen_size": "${form.size}"
+                  }
+                }
+              },
+              {
+                "type": "RadioButtonsGroup",
+                "name": "color",
+                "label": "Color",
+                "data-source": [
+                  {
+                    "id": "red",
+                    "title": "Red"
+                  },
+                  {
+                    "id": "blue",
+                    "title": "Blue"
+                  }
+                ],
+                "media-size": "regular"
+              },
+              {
+                "type": "CheckboxGroup",
+                "name": "toppings",
+                "label": "Toppings",
+                "data-source": [
+                  {
+                    "id": "cheese",
+                    "title": "Cheese"
+                  },
+                  {
+                    "id": "olives",
+                    "title": "Olives"
+                  }
+                ],
+                "min-selected-items": 1,
+                "max-selected-items": 3,
+                "init-value": [
+                  "cheese"
+                ]
+              },
+              {
+                "type": "ChipsSelector",
+                "name": "extras",
+                "label": "Extras",
+                "data-source": [
+                  {
+                    "id": "fast",
+                    "title": "Fast"
+                  },
+                  {
+                    "id": "gift",
+                    "title": "Gift wrap"
+                  }
+                ],
+                "max-selected-items": 2
+              },
+              {
+                "type": "DatePicker",
+                "name": "delivery_date",
+                "label": "Delivery date",
+                "min-date": "2026-01-01"
+              },
+              {
+                "type": "CalendarPicker",
+                "name": "stay",
+                "label": "Stay",
+                "mode": "range"
+              },
+              {
+                "type": "OptIn",
+                "name": "tos",
+                "label": "I agree to the terms",
+                "required": true,
+                "on-click-action": {
+                  "name": "open_url",
+                  "url": "https://example.com/terms"
+                }
+              },
+              {
+                "type": "If",
+                "condition": "${form.tos}",
+                "then": [
+                  {
+                    "type": "TextBody",
+                    "text": "Thanks for agreeing."
+                  }
+                ],
+                "else": [
+                  {
+                    "type": "TextCaption",
+                    "text": "Please agree to continue."
+                  }
+                ]
+              },
+              {
+                "type": "Switch",
+                "value": "${form.color}",
+                "cases": {
+                  "red": [
+                    {
+                      "type": "TextBody",
+                      "text": "You picked red"
+                    }
+                  ],
+                  "blue": [
+                    {
+                      "type": "TextBody",
+                      "text": "You picked blue"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "Footer",
+                "label": "Continue",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "type": "screen",
+                    "name": "UPLOAD"
+                  },
+                  "payload": {
+                    "full_name": "${form.full_name}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "UPLOAD",
+      "title": "Upload",
+      "data": {
+        "full_name": {
+          "type": "string",
+          "__example__": "Sam"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "form",
+            "children": [
+              {
+                "type": "PhotoPicker",
+                "name": "photos",
+                "label": "Upload photos",
+                "photo-source": "camera_gallery",
+                "max-file-size-kb": 10240,
+                "min-uploaded-photos": 1,
+                "max-uploaded-photos": 5
+              },
+              {
+                "type": "DocumentPicker",
+                "name": "docs",
+                "label": "Upload documents",
+                "allowed-mime-types": [
+                  "application/pdf"
+                ],
+                "max-file-size-kb": 5120
+              },
+              {
+                "type": "Footer",
+                "label": "Upload",
+                "on-click-action": {
+                  "name": "data_exchange",
+                  "payload": {
+                    "action": "processUploads",
+                    "photos": "${form.photos}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "MENU",
+      "title": "Choose",
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Pick an option"
+          },
+          {
+            "type": "NavigationList",
+            "name": "menu",
+            "list-items": [
+              {
+                "id": "a",
+                "main-content": {
+                  "title": "Option A",
+                  "description": "First",
+                  "metadata": "meta"
+                },
+                "tags": [
+                  "new"
+                ]
+              },
+              {
+                "id": "b",
+                "main-content": {
+                  "title": "Option B",
+                  "description": "Second"
+                }
+              }
+            ],
+            "label": "Options",
+            "media-size": "large",
+            "on-click-action": {
+              "name": "navigate",
+              "next": {
+                "type": "screen",
+                "name": "DONE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "DONE",
+      "title": "All done",
+      "terminal": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "form",
+            "children": [
+              {
+                "type": "TextBody",
+                "text": "Thanks! Your submission is complete."
+              },
+              {
+                "type": "Footer",
+                "label": "Finish",
+                "on-click-action": {
+                  "name": "complete"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

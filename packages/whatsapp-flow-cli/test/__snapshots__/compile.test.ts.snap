@@ -1,0 +1,333 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compileFlow (end-to-end) > compiles the basic lead form 1`] = `
+{
+  "routing_model": {
+    "START": [
+      "THANKS",
+    ],
+    "THANKS": [],
+  },
+  "screens": [
+    {
+      "id": "START",
+      "layout": {
+        "children": [
+          {
+            "children": [
+              {
+                "label": "Your name",
+                "name": "full_name",
+                "required": true,
+                "type": "TextInput",
+              },
+              {
+                "input-type": "email",
+                "label": "Email",
+                "name": "email",
+                "required": true,
+                "type": "TextInput",
+              },
+              {
+                "label": "Submit",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "name": "THANKS",
+                    "type": "screen",
+                  },
+                  "payload": {
+                    "email": "\${form.email}",
+                    "full_name": "\${form.full_name}",
+                  },
+                },
+                "type": "Footer",
+              },
+            ],
+            "name": "form",
+            "type": "Form",
+          },
+        ],
+        "type": "SingleColumnLayout",
+      },
+      "title": "Get in touch",
+    },
+    {
+      "id": "THANKS",
+      "layout": {
+        "children": [
+          {
+            "children": [
+              {
+                "text": "Thanks! We'll be in touch shortly.",
+                "type": "TextBody",
+              },
+              {
+                "label": "Done",
+                "on-click-action": {
+                  "name": "complete",
+                },
+                "type": "Footer",
+              },
+            ],
+            "name": "form",
+            "type": "Form",
+          },
+        ],
+        "type": "SingleColumnLayout",
+      },
+      "terminal": true,
+      "title": "Thank you",
+    },
+  ],
+  "version": "7.2",
+}
+`;
+
+exports[`compileFlow (end-to-end) > compiles the grocery example with the expected routing model 1`] = `
+{
+  "routing_model": {
+    "CONFIRM": [],
+    "PREFERENCES": [
+      "CONFIRM",
+    ],
+    "START": [
+      "PREFERENCES",
+    ],
+  },
+  "screens": [
+    {
+      "id": "START",
+      "layout": {
+        "children": [
+          {
+            "children": [
+              {
+                "label": "What should we buy?",
+                "name": "shopping_list",
+                "required": true,
+                "type": "TextArea",
+              },
+              {
+                "label": "Continue",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "name": "PREFERENCES",
+                    "type": "screen",
+                  },
+                  "payload": {
+                    "shopping_list": "\${form.shopping_list}",
+                  },
+                },
+                "type": "Footer",
+              },
+            ],
+            "name": "form",
+            "type": "Form",
+          },
+        ],
+        "type": "SingleColumnLayout",
+      },
+      "title": "Start your order",
+    },
+    {
+      "data": {
+        "shopping_list": {
+          "__example__": "Milk, eggs",
+          "type": "string",
+        },
+      },
+      "id": "PREFERENCES",
+      "layout": {
+        "children": [
+          {
+            "children": [
+              {
+                "text": "If something is out of stock, what should we do?",
+                "type": "TextBody",
+              },
+              {
+                "data-source": [
+                  {
+                    "id": "similar",
+                    "title": "Pick a similar item",
+                  },
+                  {
+                    "id": "call",
+                    "title": "Call me first",
+                  },
+                  {
+                    "id": "skip",
+                    "title": "Skip the item",
+                  },
+                ],
+                "label": "Substitution preference",
+                "name": "substitution",
+                "required": true,
+                "type": "Dropdown",
+              },
+              {
+                "label": "Review order",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "name": "CONFIRM",
+                    "type": "screen",
+                  },
+                  "payload": {
+                    "shopping_list": "\${data.shopping_list}",
+                    "substitution": "\${form.substitution}",
+                  },
+                },
+                "type": "Footer",
+              },
+            ],
+            "name": "form",
+            "type": "Form",
+          },
+        ],
+        "type": "SingleColumnLayout",
+      },
+      "title": "Substitutions",
+    },
+    {
+      "data": {
+        "shopping_list": {
+          "__example__": "Milk, eggs",
+          "type": "string",
+        },
+        "substitution": {
+          "__example__": "similar",
+          "type": "string",
+        },
+      },
+      "id": "CONFIRM",
+      "layout": {
+        "children": [
+          {
+            "children": [
+              {
+                "text": "Please review your order before submitting.",
+                "type": "TextBody",
+              },
+              {
+                "label": "Submit order",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "shopping_list": "\${data.shopping_list}",
+                    "substitution": "\${data.substitution}",
+                  },
+                },
+                "type": "Footer",
+              },
+            ],
+            "name": "form",
+            "type": "Form",
+          },
+        ],
+        "type": "SingleColumnLayout",
+      },
+      "terminal": true,
+      "title": "Confirm your order",
+    },
+  ],
+  "version": "7.2",
+}
+`;
+
+exports[`compileFlow (end-to-end) > emits data_api_version and folds the action into a data_exchange payload 1`] = `
+{
+  "data_api_version": "3.0",
+  "routing_model": {
+    "SLOTS": [],
+    "START": [
+      "SLOTS",
+    ],
+  },
+  "screens": [
+    {
+      "id": "START",
+      "layout": {
+        "children": [
+          {
+            "children": [
+              {
+                "label": "Postcode",
+                "name": "postcode",
+                "required": true,
+                "type": "TextInput",
+              },
+              {
+                "label": "Check availability",
+                "on-click-action": {
+                  "name": "data_exchange",
+                  "payload": {
+                    "action": "lookupSlots",
+                    "postcode": "\${form.postcode}",
+                  },
+                },
+                "type": "Footer",
+              },
+            ],
+            "name": "form",
+            "type": "Form",
+          },
+        ],
+        "type": "SingleColumnLayout",
+      },
+      "title": "Find a slot",
+    },
+    {
+      "data": {
+        "slots": {
+          "__example__": [],
+          "type": "array",
+        },
+      },
+      "id": "SLOTS",
+      "layout": {
+        "children": [
+          {
+            "children": [
+              {
+                "data-source": [
+                  {
+                    "id": "morning",
+                    "title": "Morning",
+                  },
+                  {
+                    "id": "afternoon",
+                    "title": "Afternoon",
+                  },
+                ],
+                "label": "Available slots",
+                "name": "slot",
+                "required": true,
+                "type": "RadioButtonsGroup",
+              },
+              {
+                "label": "Book",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "slot": "\${form.slot}",
+                  },
+                },
+                "type": "Footer",
+              },
+            ],
+            "name": "form",
+            "type": "Form",
+          },
+        ],
+        "type": "SingleColumnLayout",
+      },
+      "terminal": true,
+      "title": "Pick a slot",
+    },
+  ],
+  "version": "7.2",
+}
+`;

@@ -24,10 +24,11 @@ A flows app is a directory with a `flows.config.ts` and one `.tsx` file per flow
 
 ```
 flows/
-  flows.config.ts        project config (the "next.config.ts" of flows)
-  grocery.tsx            one flow  ->  name "grocery"
-  woolworths-login.tsx   one flow  ->  name "woolworths_login"
-  flows.lock.json        committed; maps each flow to its Meta id per WABA
+  flows.config.ts                project config (the "next.config.ts" of flows)
+  grocery.tsx                    one flow  ->  name "grocery"
+  woolworths-login.tsx           one flow  ->  name "woolworths_login"
+  flows.lock.json                committed; maps each flow to its Meta id per WABA
+  whatsapp-flows.generated.ts    auto-written on push; typed ids for the current WABA
 ```
 
 `flows.config.ts`:
@@ -36,11 +37,14 @@ flows/
 import { defineFlowsApp } from "whatsapp-flow-tsx";
 
 export default defineFlowsApp({
-  version: "7.3",            // default Flow JSON version for every flow
-  wabas: { prod: { id: "…" }, dev: { id: "…" } },
-  // `push` targets the `dev` WABA by default; override with `defaultWaba`.
+  version: "7.3",                                    // default Flow JSON version
+  waba: { id: process.env.WHATSAPP_WABA_ID! },       // one WABA per env file
 });
 ```
+
+One WABA per checkout. Swap dev/prod by switching env files (`.env.local` vs
+`.env.production`), not by passing a flag. The lockfile is keyed by WABA id, so
+committing it preserves both dev and prod state across env switches.
 
 ### A flow is a file
 
@@ -165,9 +169,8 @@ whatsapp-flow check                  # validate every flow and template
 whatsapp-flow inspect                # outline each flow (routes/ids) and template (text/vars)
 whatsapp-flow build                  # compile all → flows/.build/ (<name>.json, <name>.template.json)
 whatsapp-flow push --dry-run         # show what would sync to Meta (create/update/edit/skip)
-whatsapp-flow push                   # sync drafts to Meta
-whatsapp-flow push --publish         # sync + publish (goes live)
-whatsapp-flow push --waba both       # target every configured WABA (default: defaultWaba)
+whatsapp-flow push                   # sync + publish to the current env's WABA
+whatsapp-flow ids                    # print locked ids as JSON (push auto-writes the typed module)
 
 whatsapp-flow schema  --out flow.schema.json        # emit the JSON Schema used for verification
 ```
@@ -178,26 +181,29 @@ outline) — **not** a faithful render of WhatsApp's UI.
 ## Push & deploy
 
 `push` compiles every flow, then reconciles it against Meta and a committed
-**`flows.lock.json`** (scoped per WABA: `name → { id, rev, hash }`):
+**`flows.lock.json`** (scoped per WABA id: `name → { id, rev, hash }`):
 
 - **Change detection** — each compiled flow is hashed; an unchanged flow is **skipped**.
-- **Create / adopt** — a flow with no lock entry is created as a Meta draft; if a live
-  flow already exists with the same name, it is **adopted by name** rather than
-  duplicated, and its id is recorded.
-- **Update** — a changed flow's JSON is re-uploaded to its existing draft.
+- **Create / adopt** — a flow with no lock entry is created on Meta; if a live flow
+  already exists with the same name, it is **adopted by name** rather than duplicated.
+- **Update** — a changed flow's JSON is re-uploaded.
+- **Publish** — every touched flow is published (goes live) on every push. Iterate in
+  app code with feature flags, not by holding back the publish step.
 - **Versioning** — `rev` in the lockfile bumps on every change.
-- **Publish gate** — drafts are synced by default; going live requires `--publish`.
+- **Typed ids** — after a successful push, `whatsapp-flows.generated.ts` is rewritten
+  next to `flows.config.ts` so `import { WHATSAPP_FLOWS } from "..."` resolves to the
+  current env's ids. Override the path via `generatedIdsPath` in `flows.config.ts`.
 
-**Templates** ride the same pipeline and lockfile. A template with no lock entry
-(and no live template of the same name + language) is **created**, which submits it
-to Meta for review; a changed template is **edited** in place; an unchanged one is
-**skipped**. `--publish` doesn't apply — templates go live through Meta's async
-review rather than a publish call — and the lockfile records each template's last
-known review status (e.g. `PENDING`). Template keys are scoped `tpl:<name>@<language>`.
+**Templates** ride the same pipeline and lockfile. A template with no lock entry (and
+no live template of the same name + language) is **created**, which submits it to Meta
+for async review; a changed template is **edited** in place; an unchanged one is
+**skipped**. The auto-publish behavior doesn't apply — templates go live through Meta
+review — and the lockfile records each template's last known status (e.g. `PENDING`).
+Template keys are scoped `tpl:<name>@<language>`.
 
-`push` needs `WHATSAPP_ACCESS_TOKEN` in the environment. Load it however you like,
-e.g. `dotenvx run -f .env.local -- whatsapp-flow push`. Start with `push --dry-run`
-to preview the plan.
+`push` needs `WHATSAPP_WABA_ID` and `WHATSAPP_ACCESS_TOKEN` in the environment. Load
+them however you like, e.g. `dotenvx run -f .env.local -- whatsapp-flow push`. Start
+with `push --dry-run` to preview the plan.
 
 Configuring a flow's `endpoint_uri` (for data-exchange flows) is **not** done by
 `push`; set it via the Graph API / Flow Builder separately.

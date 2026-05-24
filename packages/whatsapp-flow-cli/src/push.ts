@@ -8,6 +8,7 @@ import {
   isTemplateModule,
   renderTemplatePreview,
 } from "./compile-template.ts";
+import { buildIdMap, renderModule } from "./ids.ts";
 import { hashJson, readLock, writeLock } from "./lockfile.ts";
 import { loadModule } from "./load-module.ts";
 import {
@@ -29,6 +30,8 @@ interface CompiledApp {
   flows: CompiledFlow[];
   templates: CompiledTemplate[];
 }
+
+const DEFAULT_IDS_FILE = "whatsapp-flows.generated.ts";
 
 /** Compile every asset in the project, classifying each `.tsx` as a flow or a
  * message template (the latter export `template`). The module is loaded once. */
@@ -108,41 +111,24 @@ export async function inspectProject(flowsDir: string): Promise<void> {
 }
 
 export interface PushOptions {
-  waba?: string;
-  publish?: boolean;
   dryRun?: boolean;
 }
 
-interface Target {
-  label: string;
-  id: string;
-}
-
-function resolveTargets(app: FlowsAppConfig, wabaArg: string | undefined): Target[] {
-  const wabas = app.wabas ?? {};
-  const labels = Object.keys(wabas);
-  const pick = wabaArg ?? app.defaultWaba ?? (labels.includes("dev") ? "dev" : labels[0]);
-  if (!pick) {
+/** Pull the single WABA id out of the loaded config; error clearly if unset. */
+function resolveWabaId(app: FlowsAppConfig): string {
+  const id = app.waba?.id?.trim();
+  if (!id) {
     throw new FlowCompileError(
-      "No WABA to push to. Add `wabas` + `defaultWaba` to flows.config.ts, or pass --waba <id>.",
+      "No WABA id. Set `waba: { id: process.env.WHATSAPP_WABA_ID! }` in flows.config.ts " +
+        "and export WHATSAPP_WABA_ID in your env file (e.g. .env.local).",
     );
   }
-  if (pick === "both") {
-    if (labels.length === 0)
-      throw new FlowCompileError("--waba both needs `wabas` in flows.config.ts.");
-    return labels.map((label) => ({ label, id: wabas[label]!.id }));
-  }
-  if (wabas[pick]) return [{ label: pick, id: wabas[pick]!.id }];
-  if (/^\d+$/.test(pick)) return [{ label: "custom", id: pick }];
-  throw new FlowCompileError(
-    `Unknown --waba "${pick}". Configured: ${labels.join(", ") || "(none)"}.`,
-  );
+  return id;
 }
 
-type Action = "skip" | "create" | "update" | "edit" | "publish";
+type Action = "skip" | "create" | "update" | "edit";
 
 interface Row {
-  waba: string;
   kind: "flow" | "template";
   name: string;
   action: Action;
@@ -153,115 +139,126 @@ interface Row {
 }
 
 /** Compile every flow and template and sync each to Meta. Flows: create new
- * drafts, replace changed JSON, skip unchanged (and publish with { publish }).
+ * (auto-published), replace changed JSON (then re-publish), skip unchanged.
  * Templates: create when absent (submitting for review), edit when changed,
- * skip unchanged. { dryRun } prints the plan and writes nothing. */
+ * skip unchanged. After a successful sync, write the typed ids module next to
+ * flows.config.ts. { dryRun } prints the plan and writes nothing. */
 export async function pushProject(flowsDir: string, opts: PushOptions = {}): Promise<void> {
   const { app, dir, flows, templates } = await compileAll(flowsDir);
-  const targets = resolveTargets(app, opts.waba);
+  const wabaId = resolveWabaId(app);
   const lock = await readLock(dir);
   const token = opts.dryRun ? "" : getToken();
 
+  const wabaLock = (lock.wabas[wabaId] ??= {});
   const rows: Row[] = [];
-  for (const target of targets) {
-    const wabaLock = (lock.wabas[target.label] ??= {});
 
-    for (const flow of flows) {
-      const hash = hashJson(flow.flow);
-      const entry = wabaLock[flow.name];
-      const unchanged = !!entry && entry.hash === hash;
+  for (const flow of flows) {
+    const hash = hashJson(flow.flow);
+    const entry = wabaLock[flow.name];
+    const unchanged = !!entry && entry.hash === hash;
 
-      let action: Action;
-      let flowId = entry?.id;
-      if (unchanged && !opts.publish) {
-        action = "skip";
-      } else {
-        if (!flowId && !opts.dryRun) {
-          const existing = await findFlowByName(target.id, flow.name, token);
-          if (existing) flowId = existing.id;
-        }
-        action = !flowId ? "create" : unchanged ? "publish" : "update";
+    let action: Action;
+    let flowId = entry?.id;
+    if (unchanged) {
+      action = "skip";
+    } else {
+      if (!flowId && !opts.dryRun) {
+        const existing = await findFlowByName(wabaId, flow.name, token);
+        if (existing) flowId = existing.id;
       }
-
-      if (!opts.dryRun && action !== "skip") {
-        if (action === "create") {
-          flowId = await createFlow(
-            target.id,
-            { name: flow.name, categories: flow.categories, flow: flow.flow },
-            token,
-          );
-        } else if (action === "update") {
-          await uploadFlowJson(flowId!, flow.flow, token);
-        }
-        if (opts.publish && flowId) await publishFlow(flowId, token);
-        const rev = unchanged ? entry!.rev : (entry?.rev ?? 0) + 1;
-        wabaLock[flow.name] = { id: flowId!, rev, hash, kind: "flow" };
-      }
-
-      rows.push({
-        waba: target.label,
-        kind: "flow",
-        name: flow.name,
-        action,
-        published: Boolean(opts.publish) && action !== "skip",
-        rev: wabaLock[flow.name]?.rev ?? entry?.rev,
-        id: flowId,
-      });
+      action = !flowId ? "create" : "update";
     }
 
-    for (const tpl of templates) {
-      const key = `tpl:${tpl.name}@${tpl.language}`;
-      const hash = hashJson(tpl.payload);
-      const entry = wabaLock[key];
-      const unchanged = !!entry && entry.hash === hash;
-
-      let action: Action;
-      let id = entry?.id;
-      let status = entry?.status;
-      if (unchanged) {
-        action = "skip";
-      } else {
-        if (!id && !opts.dryRun) {
-          const existing = await findTemplateByName(target.id, tpl.name, tpl.language, token);
-          if (existing) {
-            id = existing.id;
-            status = existing.status;
-          }
-        }
-        action = !id ? "create" : "edit";
+    if (!opts.dryRun && action !== "skip") {
+      if (action === "create") {
+        flowId = await createFlow(
+          wabaId,
+          { name: flow.name, categories: flow.categories, flow: flow.flow },
+          token,
+        );
+      } else if (action === "update") {
+        await uploadFlowJson(flowId!, flow.flow, token);
       }
-
-      if (!opts.dryRun && action !== "skip") {
-        if (action === "create") {
-          const res = await createTemplate(target.id, tpl.payload, token);
-          id = res.id;
-          status = res.status ?? "PENDING";
-        } else if (action === "edit") {
-          await editTemplate(id!, tpl.components, token);
-          status = "PENDING";
-        }
-        const rev = unchanged ? entry!.rev : (entry?.rev ?? 0) + 1;
-        wabaLock[key] = { id: id!, rev, hash, kind: "template", status };
-      }
-
-      rows.push({
-        waba: target.label,
-        kind: "template",
-        name: `${tpl.name} (${tpl.language})`,
-        action,
-        published: false,
-        rev: wabaLock[key]?.rev ?? entry?.rev,
-        id,
-        status,
-      });
+      await publishFlow(flowId!, token);
+      const rev = (entry?.rev ?? 0) + 1;
+      wabaLock[flow.name] = { id: flowId!, rev, hash, kind: "flow" };
     }
+
+    rows.push({
+      kind: "flow",
+      name: flow.name,
+      action,
+      published: action !== "skip",
+      rev: wabaLock[flow.name]?.rev ?? entry?.rev,
+      id: flowId,
+    });
   }
 
-  if (!opts.dryRun) await writeLock(dir, lock);
-  if (opts.publish && templates.length > 0) {
-    console.log("note: --publish applies to flows only; templates go live through Meta review.");
+  for (const tpl of templates) {
+    const key = `tpl:${tpl.name}@${tpl.language}`;
+    const hash = hashJson(tpl.payload);
+    const entry = wabaLock[key];
+    const unchanged = !!entry && entry.hash === hash;
+
+    let action: Action;
+    let id = entry?.id;
+    let status = entry?.status;
+    if (unchanged) {
+      action = "skip";
+    } else {
+      if (!id && !opts.dryRun) {
+        const existing = await findTemplateByName(wabaId, tpl.name, tpl.language, token);
+        if (existing) {
+          id = existing.id;
+          status = existing.status;
+        }
+      }
+      action = !id ? "create" : "edit";
+    }
+
+    if (!opts.dryRun && action !== "skip") {
+      if (action === "create") {
+        const res = await createTemplate(wabaId, tpl.payload, token);
+        id = res.id;
+        status = res.status ?? "PENDING";
+      } else if (action === "edit") {
+        await editTemplate(id!, tpl.components, token);
+        status = "PENDING";
+      }
+      const rev = (entry?.rev ?? 0) + 1;
+      wabaLock[key] = { id: id!, rev, hash, kind: "template", status };
+    }
+
+    rows.push({
+      kind: "template",
+      name: `${tpl.name} (${tpl.language})`,
+      action,
+      published: false,
+      rev: wabaLock[key]?.rev ?? entry?.rev,
+      id,
+      status,
+    });
   }
-  printSummary(rows, opts);
+
+  if (!opts.dryRun) {
+    await writeLock(dir, lock);
+    await writeIdsModule(dir, app, wabaId, wabaLock);
+  }
+  printSummary(rows, wabaId, opts);
+}
+
+async function writeIdsModule(
+  dir: string,
+  app: FlowsAppConfig,
+  wabaId: string,
+  section: Record<string, import("./lockfile.ts").LockEntry>,
+): Promise<void> {
+  const relPath = app.generatedIdsPath ?? DEFAULT_IDS_FILE;
+  const dest = path.isAbsolute(relPath) ? relPath : path.resolve(dir, relPath);
+  await mkdir(path.dirname(dest), { recursive: true });
+  const map = buildIdMap(section);
+  await writeFile(dest, renderModule(map, wabaId), "utf8");
+  console.log(`✓ Wrote ids → ${path.relative(process.cwd(), dest)}`);
 }
 
 const GLYPH: Record<Action, string> = {
@@ -269,21 +266,19 @@ const GLYPH: Record<Action, string> = {
   create: "+",
   update: "~",
   edit: "✎",
-  publish: "↑",
 };
 
-function printSummary(rows: Row[], opts: PushOptions): void {
+function printSummary(rows: Row[], wabaId: string, opts: PushOptions): void {
   const prefix = opts.dryRun ? "(dry run) " : "";
-  console.log(`\n${prefix}push summary`);
+  console.log(`\n${prefix}push summary — WABA ${wabaId}`);
   const nameW = Math.max(4, ...rows.map((r) => r.name.length));
-  const wabaW = Math.max(4, ...rows.map((r) => r.waba.length));
   for (const r of rows) {
     const tail =
       r.kind === "template"
         ? `${r.status ? `  ${r.status}` : ""}${r.id ? `  id ${r.id}` : opts.dryRun && r.action === "create" ? "  id (new)" : ""}`
-        : `${r.rev !== undefined ? `  rev ${r.rev}` : ""}${r.id ? `  id ${r.id}` : opts.dryRun && r.action === "create" ? "  id (new)" : ""}${r.published ? "  PUBLISHED" : ""}`;
+        : `${r.rev !== undefined ? `  rev ${r.rev}` : ""}${r.id ? `  id ${r.id}` : opts.dryRun && r.action === "create" ? "  id (new)" : ""}${r.published ? "  LIVE" : ""}`;
     console.log(
-      `  ${GLYPH[r.action]} ${r.waba.padEnd(wabaW)}  ${r.kind.padEnd(8)}  ${r.name.padEnd(nameW)}  ${r.action.padEnd(7)}${tail}`,
+      `  ${GLYPH[r.action]} ${r.kind.padEnd(8)}  ${r.name.padEnd(nameW)}  ${r.action.padEnd(7)}${tail}`,
     );
   }
   if (opts.dryRun) console.log("\nNo changes sent to Meta. Re-run without --dry-run to apply.");

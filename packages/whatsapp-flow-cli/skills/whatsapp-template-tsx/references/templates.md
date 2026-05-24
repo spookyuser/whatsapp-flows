@@ -168,10 +168,10 @@ payload shape directly against the Graph API.
   error is surfaced if it refuses.
 - **skip** — unchanged (same content hash).
 
-`--publish` does **not** apply to templates — they go live through Meta's async
-review, not a publish call. `push --dry-run` previews the plan; `push --waba both`
-targets every configured WABA. Template ids differ per WABA even for identical
-content.
+Templates go live through Meta's async review, not a publish call — push's
+auto-publish behavior for flows doesn't apply. `push --dry-run` previews the plan.
+Template ids differ per WABA even for identical content; switch targets by switching
+env file, not by passing a flag.
 
 ## Authoring rules (enforced at compile time)
 

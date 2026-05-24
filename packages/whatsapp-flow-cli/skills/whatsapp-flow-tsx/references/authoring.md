@@ -18,7 +18,12 @@ and are normalized to Meta's kebab-case keys at compile time (`scaleType` →
 - [Conditionals: If / Switch](#conditionals-if--switch)
 - [Multi-screen data flow](#multi-screen-data-flow)
 - [Data-exchange (endpoint) flows](#data-exchange-endpoint-flows)
+  - [Routing model is static, acyclic, and must reach a terminal](#routing-model-is-static-acyclic-and-must-reach-a-terminal)
+  - [Pattern: endpoint-driven retry without static loops](#pattern-endpoint-driven-retry-without-static-loops)
+  - [Limitations to know about](#limitations-to-know-about)
 - [Common validation errors](#common-validation-errors)
+  - [Local (check/build/push)](#local-checkbuildpush--route-scoped-before-talking-to-meta)
+  - [Meta-side (publish)](#meta-side-publish--surface-only-at-flows-push-time)
 
 ## Mental model
 
@@ -243,9 +248,9 @@ export function Confirm() {                         // "/confirm" → CONFIRM
 
 ## Data-exchange (endpoint) flows
 
-Only when the flow needs **live data** from a server (look up slots, prices, etc.).
-Set `dataApiVersion` and `endpointUri` in the flow's `defineFlow({…})` config
-(they're per-flow, not app-level), and use `<Exchange>`.
+Only when the flow needs **live data** from a server (validate credentials, look
+up slots, prices). Set `dataApiVersion` and `endpointUri` in the flow's
+`defineFlow({…})` config (they're per-flow, not app-level), and use `<Exchange>`.
 
 ```ts
 export const flow = defineFlow({
@@ -256,32 +261,122 @@ export const flow = defineFlow({
 ```
 
 `<Exchange action="lookupSlots" next="/slots" data={{ postcode: field("postcode") }}>`
-sends the payload (with `action` folded in) to the endpoint and routes to `/slots`,
-which declares the returned fields in its `<Screen data={…}>` schema. The endpoint's
-own responses must include `"version": "3.0"` — but that's endpoint/runtime
-territory, not part of authoring here.
+sends the payload (with `action` folded in) to the endpoint, and the endpoint's
+response decides what screen to render next. The endpoint must be implemented
+separately — see [references/endpoint.md](endpoint.md) for the wire protocol
+(encryption, request/response shapes, provisioning prerequisites).
 
 Note: only `data_api_version` is emitted into `flow.json`. `endpointUri` is **not**
 in the compiled JSON and `flows push` does **not** configure it — it's an
 asset-level setting (Meta's `endpoint_uri`/Builder) applied separately via the Graph
-API, so don't be alarmed when you don't see the URL in the output.
+API. **A flow can't publish until both `endpoint_uri` is set on the asset and the
+phone number's encryption public key is uploaded and signed.** Provision those once,
+before the first `flows push`, or publish fails with Meta error 139002 / subcode
+4233024 (missing endpoint_uri) or 4233012 (missing signed key).
 
-**Important limitation — choice options are static, not endpoint-driven.** This
-framework does **not** let you bind a `Dropdown`/`RadioButtonsGroup`/`CheckboxGroup`/
-`ChipsSelector`'s option list to a returned array like `${data.slots}`: options come
-only from static `<Option>` children (the compiler requires a non-empty literal list
-and rejects a ref there, and there is no `dataSource` prop). So you cannot render a
-genuinely dynamic list of endpoint-returned choices. What you *can* do with returned
-`data(...)` values: use them in `text`/`TextBody`, in `visible`/`enabled`
-expressions, as an input's `initValue`, or in an action's `data` payload. For a
-choice screen fed by an endpoint, author the realistic options as static `<Option>`s
-(this is exactly what the framework's own `dynamic-data-exchange` fixture does). If a
-flow truly needs a variable-length endpoint-driven list, that's a framework gap to
-raise — don't try to force it in TSX.
+### Routing model is static, acyclic, and must reach a terminal
+
+The routing model Meta validates at publish time is the **static** graph built
+from your `<Next>` and `<Exchange next>` props. It must be acyclic and every
+path must reach a screen marked terminal (one with `<Complete>` / `success`).
+This is true *even for endpoint-driven flows where the server decides where to
+navigate at runtime* — the static graph still has to look complete on paper.
+
+The framework's local `check` does **not** catch these — they only surface when
+Meta validates at publish. Watch for:
+
+- **Self-loops:** `<Exchange next="/retry">` inside a screen exported as `Retry`
+  creates `RETRY → RETRY` and Meta rejects with `INVALID_ROUTING_MODEL` ("Loop
+  detected in the routing model for screens: [RETRY]").
+- **Missing terminal:** every static path must reach a `<Complete>`. If your
+  whole flow is `<Exchange>`-driven, you still need at least one screen with
+  `<Complete>` reachable via the static graph (`MISSING_TERMINAL_SCREEN`).
+
+The right pattern for retry / error UX is **not** to add self-loops or branching
+retry screens. Use the endpoint to navigate back to the input screen at runtime,
+which is invisible to the static validator.
+
+### Pattern: endpoint-driven retry without static loops
+
+The endpoint can return *any* screen at runtime, including the current one or
+Meta's reserved screens. Two facilities make retry UX easy:
+
+- **`SUCCESS` (reserved terminal screen):** if the endpoint responds with
+  `{ screen: "SUCCESS", data: { extension_message_response: { params: {...} } } }`,
+  Meta closes the flow with its built-in "Done" UI and delivers `params` to the
+  business via the `nfm_reply` webhook. You don't declare `SUCCESS` anywhere —
+  it always works.
+- **`error_message` (magic data field):** if the endpoint responds with
+  `{ screen: "START", data: { error_message: "…" } }`, Meta re-renders that
+  screen and surfaces `error_message` as an inline error. You don't declare
+  `error_message` in the screen's `data` schema — it's universally accepted.
+  The `screen` value must be the **compiled screen id** — `Index` exports to
+  id `START`, not `"INDEX"`. Sending a screen id that doesn't exist in the
+  flow makes Meta drop the response and show the user a generic "something
+  went wrong" with **no log line on either side**, so this is silent and
+  expensive to debug. Match the casing exactly to what `flows build` emits.
+
+So the canonical "form with server-side validation and retry" shape is two
+screens — the form, plus a placeholder `<Complete>` that exists only so the
+static graph terminates — and the endpoint chooses `SUCCESS` or
+`START + error_message` at runtime:
+
+```tsx
+export function Index() {
+  return (
+    <Screen title="Sign in">
+      <Form>
+        <TextInput name="email" label="Email" inputType="email" required />
+        <TextInput name="password" label="Password" inputType="password" required />
+        <Footer>
+          <Exchange action="login" next="/done"
+            data={{ email: field("email"), password: field("password") }}>
+            Continue
+          </Exchange>
+        </Footer>
+      </Form>
+    </Screen>
+  );
+}
+
+// Static terminal required by Meta's validator. Never rendered at runtime —
+// the endpoint returns SUCCESS on success (auto-closes the flow) or
+// re-navigates to START with `error_message` on failure.
+export function Done() {
+  return (
+    <Screen title="Signed in" success>
+      <Form>
+        <TextBody>You're signed in.</TextBody>
+        <Footer><Complete>Done</Complete></Footer>
+      </Form>
+    </Screen>
+  );
+}
+```
+
+### Limitations to know about
+
+- **`initValue` is rejected on `TextInput`.** Meta accepts `init-value` on
+  `RadioButtonsGroup`, `CheckboxGroup`, `ChipsSelector`, `OptIn`, etc., but
+  rejects it on `TextInput` (and `TextArea`) at publish time with
+  `INVALID_PROPERTY_KEY`. The framework's `check` does not catch this — it
+  surfaces as a Meta-side validation error. There is no working alternative
+  in current Flow JSON: a text input cannot be pre-filled by the flow itself.
+  Pass the value via `flow_action_payload` on send if you must (and then
+  *only* into a screen-data field used in text, not into an input).
+- **Choice options are static, not endpoint-driven.** You cannot bind a
+  `Dropdown`/`RadioButtonsGroup`/`CheckboxGroup`/`ChipsSelector`'s option list
+  to a returned array like `${data.slots}` — options come only from static
+  `<Option>` children. What you *can* do with returned `data(...)` values: use
+  them in `text`/`TextBody`, in `visible`/`enabled` expressions, on inputs
+  that accept `initValue` (above), or in an action's `data` payload. For a
+  choice screen fed by an endpoint, author realistic options as static
+  `<Option>`s (the framework's own `dynamic-data-exchange` fixture does
+  exactly this).
 
 ## Common validation errors
 
-`build`/`check` fail with route-scoped messages. Typical fixes:
+### Local (`check`/`build`/`push`) — route-scoped, before talking to Meta
 
 | Message gist | Fix |
 | --- | --- |
@@ -293,3 +388,22 @@ raise — don't try to force it in TSX.
 | Terminal screen without `<Complete>` / dead-end screen | Add a `<Complete>`, or wire an outgoing `<Next>` / `<Exchange>`. |
 
 Re-run `check` after each fix until it reports `✓ N screen(s) valid`.
+
+### Meta-side (publish) — surface only at `flows push` time
+
+`check` passes but `flows push` fails. Read the message in the error and, for
+detail, query Meta directly:
+
+```bash
+curl -sS "https://graph.facebook.com/v25.0/<FLOW_ID>?fields=validation_errors,status,health_status,endpoint_uri" \
+  -H "Authorization: Bearer $WHATSAPP_ACCESS_TOKEN"
+```
+
+| Code / message | Cause | Fix |
+| --- | --- | --- |
+| 139002 / 4233012 "Missing flows signed public key" | The phone number's encryption public key isn't uploaded (or its `business_public_key_signature_status` isn't `VALID`). | Upload via `POST /{PHONE_NUMBER_ID}/whatsapp_business_encryption` (see [endpoint.md](endpoint.md)) **before** the first publish of any data-exchange flow on that number. |
+| 139002 / 4233024 "Publishing without specifying 'endpoint_uri' is forbidden" | `endpoint_uri` not set on the asset. `defineFlow({ endpointUri })` is local-only — it doesn't propagate. | `POST /{FLOW_ID}` with form field `endpoint_uri=<url>`. One-time per flow per WABA. |
+| 139002 / 4233014 "Endpoint not available" | Meta pinged your endpoint during publish and didn't get a valid encrypted `{data:{status:"active"}}` back. | Deploy your endpoint first. Smoke-test by sending a properly-encrypted ping yourself (script in [endpoint.md](endpoint.md)); the public response should decrypt to `{"data":{"status":"active"}}`. |
+| `INVALID_ROUTING_MODEL` "Loop detected" | Static routing graph has a cycle (e.g. an `<Exchange next="/x">` inside the `X` screen). | Reshape: don't have the static graph loop. Have the endpoint re-navigate at runtime instead (see "Pattern: endpoint-driven retry" above). |
+| `MISSING_TERMINAL_SCREEN` | No screen reachable in the static graph has `<Complete>`. | Add a terminal screen with `<Complete>` even if the endpoint is expected to terminate via `SUCCESS` at runtime. |
+| `INVALID_PROPERTY_KEY` "Property 'init-value' is not allowed in 'TextInput'" | TextInput / TextArea reject `init-value` in current Flow JSON versions. | Remove the prop. There is no working alternative for these inputs. |

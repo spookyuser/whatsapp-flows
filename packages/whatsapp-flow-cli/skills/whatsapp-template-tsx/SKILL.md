@@ -30,12 +30,14 @@ full app layout, the CLI, images, and Flow authoring, see the companion
 import { defineFlowsApp } from "whatsapp-flow-tsx";
 
 export default defineFlowsApp({
-  language: "en_US",         // default language for templates that don't set their own
-  // Fake WABA ids — replace with your own. `flows push` targets `dev` by
-  // default (override with `defaultWaba`).
-  wabas: { prod: { id: "111111111111111" }, dev: { id: "222222222222222" } },
+  language: "en_US",                              // default language for templates
+  waba: { id: process.env.WHATSAPP_WABA_ID! },    // one WABA per env file
 });
 ```
+
+One WABA per checkout — swap dev/prod by switching env files (`.env.local` vs
+`.env.production`), not by passing a flag. See the `whatsapp-flow-tsx` skill for the
+full dev/prod workflow.
 
 ## A template is a file
 
@@ -138,12 +140,11 @@ pnpm flows check             # validate every flow + template (run often)
 pnpm flows inspect           # outline templates: text with {{n}} + example values
 pnpm flows build             # compile all → flows/.build/<name>.template.json
 pnpm flows push --dry-run    # show what would sync to Meta (create/edit/skip)
-pnpm flows push              # create/edit templates on Meta (needs WHATSAPP_ACCESS_TOKEN)
-pnpm flows push --waba both  # target every configured WABA (default: defaultWaba)
+pnpm flows push              # create/edit templates on the current env's WABA
 ```
 
 `push` reconciles each template against Meta and `flows.lock.json` (key
-`tpl:<name>@<language>`, per WABA):
+`tpl:<name>@<language>`, per WABA id):
 
 - **create** — no lock entry and no live template of that name+language →
   `POST /{WABA}/message_templates`, which **submits it for review** (response is
@@ -153,8 +154,10 @@ pnpm flows push --waba both  # target every configured WABA (default: defaultWab
   Meta only permits edits in certain review states (not while `PENDING`).
 - **skip** — unchanged.
 
-`--publish` does **not** apply to templates — they go live through Meta's async review,
-not a publish call. Ids differ per WABA even for identical content.
+Templates go live through Meta's async review, not a publish call — push's auto-publish
+behavior for flows doesn't apply to templates. Ids differ per WABA even for identical
+content. After push, the typed ids module (auto-written for flows) also includes
+`WHATSAPP_TEMPLATES`.
 
 ## Validation (enforced at compile time, fails the build)
 
@@ -177,8 +180,8 @@ Meta's sharp edges (async approval, category recategorization, same-name cooldow
 templates already on Meta — **list, send a template to a user, delete, or check
 status/approval** — use a Meta Graph API CRUD workflow (the
 `/{WABA_ID}/message_templates`, `POST/DELETE /{template_id}`, and the phone-number
-`/messages` send endpoints), which owns those Graph API operations and the dev/prod
-WABA + phone-number ids. Don't reimplement those here. For interactive multi-screen
+`/messages` send endpoints), which owns those Graph API operations and the
+phone-number ids. Don't reimplement those here. For interactive multi-screen
 **Flows** (a different asset), use the **`whatsapp-flow-tsx`** skill.
 
 ## Sharp edges

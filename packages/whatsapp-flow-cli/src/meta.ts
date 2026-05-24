@@ -47,12 +47,60 @@ async function graph(apiPath: string, token: string, options: GraphOptions = {})
   const text = await response.text();
   const data = text ? JSON.parse(text) : {};
   if (!response.ok) {
-    const detail = (data as { error?: { message?: string } }).error?.message ?? response.statusText;
-    throw new FlowCompileError(
-      `Meta ${options.method ?? "GET"} ${url.pathname} failed (${response.status}): ${detail}`,
-    );
+    throw new FlowCompileError(formatMetaError(options.method ?? "GET", url, response.status, data));
   }
   return data;
+}
+
+interface MetaErrorBody {
+  error?: {
+    message?: string;
+    type?: string;
+    code?: number;
+    error_subcode?: number;
+    error_user_title?: string;
+    error_user_msg?: string;
+    error_data?: unknown;
+    fbtrace_id?: string;
+  };
+}
+
+/** (code, subcode) → actionable hint. Meta returns opaque codes; map the ones
+ * we've seen to a one-liner that tells the developer what to actually do. */
+const KNOWN_ERRORS: Record<string, string> = {
+  // Same-name cooldown: a deleted/approved template name is held for ~4 weeks.
+  "100:2388023":
+    "Same-name cooldown — rename the template (change the .tsx filename or set `name` in defineTemplate). Meta holds the slot for ~4 weeks after a delete.",
+  // Template already exists with the same content — common when adopting a live template.
+  "100:2388024":
+    "A template with this name+language already exists on Meta. Bump the name, or delete the existing one first.",
+  // Generic auth / token issues.
+  "190:0":
+    "Access token is invalid or expired. Refresh WHATSAPP_ACCESS_TOKEN (System User token preferred).",
+};
+
+/** Meta wraps the real failure reason in nested fields; surface them all so the
+ * developer doesn't see a useless "Invalid parameter" line. Append a hint when
+ * we recognize the (code, subcode) pair. */
+function formatMetaError(method: string, url: URL, status: number, data: unknown): string {
+  const err = (data as MetaErrorBody).error ?? {};
+  const parts: string[] = [];
+  parts.push(`Meta ${method} ${url.pathname} failed (${status})`);
+  if (err.error_user_title) parts.push(`  ${err.error_user_title}`);
+  if (err.error_user_msg) parts.push(`  ${err.error_user_msg}`);
+  const codeBits = [
+    err.code !== undefined ? `code ${err.code}` : "",
+    err.error_subcode !== undefined ? `subcode ${err.error_subcode}` : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
+  if (err.message) parts.push(`  ${err.message}${codeBits ? ` (${codeBits})` : ""}`);
+  if (err.error_data) parts.push(`  data: ${JSON.stringify(err.error_data)}`);
+  if (err.fbtrace_id) parts.push(`  fbtrace_id: ${err.fbtrace_id}`);
+
+  const hint = KNOWN_ERRORS[`${err.code}:${err.error_subcode ?? 0}`];
+  if (hint) parts.push(`  → ${hint}`);
+  return parts.join("\n");
 }
 
 /** Find a flow by exact name on a WABA, or null. */

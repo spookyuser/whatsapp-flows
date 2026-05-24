@@ -18,8 +18,9 @@ export interface LockEntry {
 
 export interface Lockfile {
   version: number;
-  /** waba label -> asset key -> entry. Flow keys are the flow name; template
-   * keys are `tpl:<name>@<language>`. Asset ids differ per WABA. */
+  /** waba id -> asset key -> entry. Flow keys are the flow name; template
+   * keys are `tpl:<name>@<language>`. Asset ids differ per WABA. Keying by
+   * id (not label) means dev and prod checkouts share one committed lockfile. */
   wabas: Record<string, Record<string, LockEntry>>;
 }
 

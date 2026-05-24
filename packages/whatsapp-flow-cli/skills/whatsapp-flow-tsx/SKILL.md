@@ -16,10 +16,10 @@ text/media messages you *send* to start a conversation). Those are a separate as
 with their own authoring rules — see the companion **`whatsapp-template-tsx`** skill.
 
 This skill covers the whole flow loop: write `.tsx`, compile, and **push** to Meta
-(`flows push`) — flows as drafts (optionally `--publish`). Lower-level Meta lifecycle
-on existing assets — preview, deprecate, delete, send, migrate, status — belongs to a
-Meta Graph API CRUD workflow that owns those Graph API operations and the WABA /
-phone-number ids (see [Handoff](#handoff-lower-level-lifecycle)).
+(`flows push`). Push always publishes — flows go live immediately. Lower-level Meta
+lifecycle on existing assets — preview, deprecate, delete, send, migrate, status —
+belongs to a Meta Graph API CRUD workflow that owns those Graph API operations and
+the phone-number ids (see [Handoff](#handoff-lower-level-lifecycle)).
 
 ## Where things live
 
@@ -51,12 +51,16 @@ links.
 import { defineFlowsApp } from "whatsapp-flow-tsx";
 
 export default defineFlowsApp({
-  version: "7.3",            // default Flow JSON version for every flow
-  // Fake WABA ids — replace with your own. `flows push` targets `dev` by
-  // default (override with `defaultWaba`).
-  wabas: { prod: { id: "111111111111111" }, dev: { id: "222222222222222" } },
+  version: "7.3",                                 // default Flow JSON version
+  waba: { id: process.env.WHATSAPP_WABA_ID! },    // one WABA per env file
 });
 ```
+
+One WABA per checkout. `.env.local` exports the dev `WHATSAPP_WABA_ID` +
+`WHATSAPP_ACCESS_TOKEN`; `.env.production` exports the prod pair. Swap targets by
+switching env files (typically two `package.json` scripts: `flows` for dev,
+`flows:prod` for prod), not by passing a flag. The lockfile is keyed by WABA id, so
+committing it preserves both dev and prod state across env switches.
 
 `flows/grocery.tsx` — one flow:
 
@@ -111,28 +115,28 @@ pnpm flows inspect           # outline every flow: screens, ids, transitions
 pnpm flows build             # compile all → flows/.build/<name>.json (for inspection)
 
 pnpm flows push --dry-run    # show what would sync to Meta (create/update/skip)
-pnpm flows push              # sync drafts to Meta (needs WHATSAPP_ACCESS_TOKEN)
-pnpm flows push --publish    # sync + publish (goes live)
-pnpm flows push --waba both  # target every configured WABA (default: defaultWaba)
+pnpm flows push              # sync + publish to the current env's WABA
+pnpm flows:prod push         # (host script) same, targeting the prod env file
 
-pnpm flows ids                 # locked Meta ids → { flows, templates } JSON for one WABA
-pnpm flows ids --env           # WHATSAPP_FLOWS='{...}' one-liner for a .env file
-pnpm flows ids --out app/whatsapp-flows.ts   # typed `export const WHATSAPP_FLOWS … as const`
+pnpm flows ids                              # current WABA's locked ids as JSON (push auto-writes the typed module)
+pnpm flows ids --env                        # WHATSAPP_FLOWS='{...}' one-liner
+pnpm flows ids --out path/to/ids.ts         # custom path for the typed module
 ```
 
-`push` needs `WHATSAPP_ACCESS_TOKEN` in the environment (e.g. load `.env.local` with
-`dotenvx run -f .env.local -- whatsapp-flow push`). It compiles every flow, then per
-flow: **creates** a Meta draft if new (adopting a live flow by matching name on first
-push), **replaces** the JSON if its content hash changed, or **skips** it if
-unchanged — bumping `rev` in `flows.lock.json`. Publishing only happens with
-`--publish`. `inspect` is a text outline, not a faithful render of WhatsApp's UI.
+`push` needs `WHATSAPP_WABA_ID` + `WHATSAPP_ACCESS_TOKEN` (e.g. load `.env.local`
+with `dotenvx run -f .env.local -- whatsapp-flow push`). It compiles every flow,
+then per flow: **creates** on Meta if new (adopting a live flow by matching name on
+first push), **replaces** the JSON if its content hash changed, or **skips** it if
+unchanged. Every touched flow is **published immediately** — there is no draft
+gate. Iterate in app code with feature flags, not by holding back publish.
 
-`ids` reads `flows.lock.json` (no network) and emits the deployed Meta asset ids for
-one WABA as `{ flows: {…}, templates: {…} }`, keyed by full asset name. Ids differ per
-WABA, so it takes a single `--waba` (default `defaultWaba`); `--waba both` is rejected.
-Use `--env` to get a `WHATSAPP_FLOWS='{…}'` line for `.env`, or `--out <file>` to write
-a typed `export const WHATSAPP_FLOWS = {…} as const` module to import in app code. Run
-it after `push`, since it only knows ids that are already locked.
+After a successful push, the typed ids module is **auto-written** to
+`<flowsDir>/whatsapp-flows.generated.ts` (override via `generatedIdsPath` in
+`flows.config.ts`). Consumers just `import { WHATSAPP_FLOWS } from
+"@/flows/whatsapp-flows.generated"`. Commit the file or gitignore + regenerate in
+CI — your call. `flows ids` is for printing/exporting in non-default formats.
+
+`inspect` is a text outline, not a faithful render of WhatsApp's UI.
 
 ## Reference helpers
 
@@ -211,13 +215,27 @@ without `<Complete>` are errors, not warnings.
 
 ## Handoff: lower-level lifecycle
 
-`flows push` handles compile + create/update flow drafts (and `--publish`). For
-everything else on flows already on Meta — **preview, deprecate, delete, send a flow
-to a user, migrate between WABAs, list, or check status/approval** — use a Meta Graph
-API CRUD workflow (the `POST/GET/DELETE /{flow_id}` and `/{WABA_ID}/flows` endpoints),
-which owns those Graph API operations and the dev/prod WABA + phone-number ids. Don't
-reimplement those here. For **message templates** (a different asset entirely), use
-the **`whatsapp-template-tsx`** skill.
+`flows push` handles compile + create/update + publish. For everything else on flows
+already on Meta — **preview, deprecate, delete, send a flow to a user, migrate
+between WABAs, list, or check status/approval** — use a Meta Graph API CRUD workflow
+(the `POST/GET/DELETE /{flow_id}` and `/{WABA_ID}/flows` endpoints), which owns
+those Graph API operations and the phone-number ids. Don't reimplement those here.
+For **message templates** (a different asset entirely), use the
+**`whatsapp-template-tsx`** skill.
+
+## Data-exchange (endpoint) flows
+
+Flows that call your server mid-flow via `<Exchange>` need a one-time
+provisioning step before the first `flows push`: upload an RSA-2048 public key
+to the phone number (per-number, shared across flows) and set `endpoint_uri`
+on the flow asset (per-flow). Without those, publish fails with Meta error
+139002. The runtime endpoint speaks an encrypted protocol (RSA-OAEP unwrap +
+AES-128-GCM, response IV flipped). See
+[references/endpoint.md](references/endpoint.md) for the full wire protocol,
+provisioning curls, and a Node.js reference implementation; see
+[references/authoring.md § Data-exchange flows](references/authoring.md#data-exchange-endpoint-flows)
+for the TSX-side patterns (static routing constraints, the `SUCCESS` magic
+terminal, and the `error_message` magic data field for inline retry UX).
 
 ## Sharp edges
 

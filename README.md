@@ -25,8 +25,8 @@ A flows app is a directory with a `flows.config.ts` and one `.tsx` file per flow
 ```
 flows/
   flows.config.ts        project config (the "next.config.ts" of flows)
-  grocery.tsx            one flow  ->  name "acme_grocery"
-  woolworths-login.tsx   one flow  ->  name "acme_woolworths_login"
+  grocery.tsx            one flow  ->  name "grocery"
+  woolworths-login.tsx   one flow  ->  name "woolworths_login"
   flows.lock.json        committed; maps each flow to its Meta id per WABA
 ```
 
@@ -37,10 +37,8 @@ import { defineFlowsApp } from "whatsapp-flow-tsx";
 
 export default defineFlowsApp({
   version: "7.3",            // default Flow JSON version for every flow
-  namePrefix: "acme_",       // file name → flow name (grocery.tsx → acme_grocery)
-  categories: ["SIGN_IN"],   // default categories
   wabas: { prod: { id: "…" }, dev: { id: "…" } },
-  defaultWaba: "dev",        // which WABA `push` targets by default
+  // `push` targets the `dev` WABA by default; override with `defaultWaba`.
 });
 ```
 
@@ -56,9 +54,9 @@ compiler infers the `routing_model` from your links.
 import { defineFlow, Screen, Form, TextArea, TextBody, Footer, Next, Complete, field } from "whatsapp-flow-tsx";
 
 export const flow = defineFlow({
-  // name defaults to namePrefix + filename ("acme_grocery"); override here.
+  // name defaults to the filename ("grocery"); set `name` to override.
   categories: ["LEAD_GENERATION"],
-  // version + categories inherit the app; dataApiVersion + endpointUri are per-flow.
+  // version inherits the app; dataApiVersion + endpointUri are per-flow.
 });
 
 export function Index() {                    // required: start screen at "/" → id START
@@ -104,7 +102,7 @@ exports `template` (a `defineTemplate({...})` config) instead of screens; it liv
 in the same `flows/` directory and pushes to the same WABAs.
 
 ```tsx
-// flows/welcome.tsx  →  template "acme_welcome"
+// flows/welcome.tsx  →  template "welcome"
 import { defineTemplate, Template, v } from "whatsapp-flow-tsx";
 
 export const template = defineTemplate({ category: "MARKETING" });
@@ -152,8 +150,8 @@ and fills the example URL automatically:
 
 `defineTemplate` fields: `category` (`MARKETING` | `UTILITY` | `AUTHENTICATION`,
 required), `language` (defaults to the app `language` or `en_US`), `name` (defaults
-to `namePrefix` + filename, lowercased), and `allowCategoryChange` (default `false`,
-so Meta must approve the category you chose rather than silently re-categorizing).
+to the filename, lowercased — set to override), and `allowCategoryChange` (default
+`false`, so Meta must approve the category you chose rather than silently re-categorizing).
 Compile-time checks enforce Meta's structural rules: exactly one body, at most one
 variable in a header, no variables in a footer, a single trailing variable in a URL,
 and a non-empty example for every variable.

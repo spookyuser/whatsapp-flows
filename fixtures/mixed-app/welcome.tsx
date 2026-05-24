@@ -1,8 +1,8 @@
 import { defineTemplate, Template, v } from "whatsapp-flow-tsx";
 
-// A marketing template: header + body + footer + buttons. `name` is reused in
-// the header and body — each component numbers its own variables, so it is
-// {{1}} in both, and its example is collected once per component.
+// A marketing template: header + body + footer + buttons. The variable `name`
+// is reused in the header and body — each component numbers its own variables,
+// so it is {{1}} in both, and its example is collected once per component.
 export const template = defineTemplate({ category: "MARKETING" });
 
 export default function Welcome() {

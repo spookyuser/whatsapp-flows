@@ -1,6 +1,6 @@
 import { defineFlow, Screen, Form, TextInput, Footer, Complete, field } from "whatsapp-flow-tsx";
 
-// Name override beats the project namePrefix. Single screen → START.
+// Custom name overrides the filename default. Single screen → START.
 export const flow = defineFlow({ name: "custom_login", categories: ["SIGN_IN"] });
 
 export function Index() {

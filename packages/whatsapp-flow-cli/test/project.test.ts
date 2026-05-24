@@ -10,8 +10,8 @@ const root = path.resolve(here, "../../..");
 const at = (p: string): string => path.join(root, p);
 
 describe("single-file flows", () => {
-  it("compiles a single-screen flow with a name override", async () => {
-    const c = await compileFlowFile(at("fixtures/app/login.tsx"), { namePrefix: "test_" });
+  it("compiles a single-screen flow with a custom name", async () => {
+    const c = await compileFlowFile(at("fixtures/app/login.tsx"));
     expect(c.name).toBe("custom_login");
     expect(c.categories).toEqual(["SIGN_IN"]);
     expect(c.flow.screens.map((s) => s.id)).toEqual(["START"]);
@@ -19,12 +19,9 @@ describe("single-file flows", () => {
     expect(c.flow.screens[0]!.success).toBe(true);
   });
 
-  it("derives the name from the filename + namePrefix and routes by export name", async () => {
-    const c = await compileFlowFile(at("fixtures/app/signup.tsx"), {
-      namePrefix: "test_",
-      version: "7.2",
-    });
-    expect(c.name).toBe("test_signup");
+  it("derives the name from the filename and routes by export name", async () => {
+    const c = await compileFlowFile(at("fixtures/app/signup.tsx"), { version: "7.2" });
+    expect(c.name).toBe("signup");
     expect(c.flow.version).toBe("7.2");
     // Index -> START ("/"), Details -> DETAILS ("/details"); Next links them.
     expect(c.flow.screens.map((s) => s.id)).toEqual(["START", "DETAILS"]);
@@ -32,8 +29,8 @@ describe("single-file flows", () => {
   });
 
   it("produces a stable content hash across recompiles (change detection)", async () => {
-    const a = await compileFlowFile(at("fixtures/app/login.tsx"), { namePrefix: "test_" });
-    const b = await compileFlowFile(at("fixtures/app/login.tsx"), { namePrefix: "test_" });
+    const a = await compileFlowFile(at("fixtures/app/login.tsx"));
+    const b = await compileFlowFile(at("fixtures/app/login.tsx"));
     expect(hashJson(a.flow)).toBe(hashJson(b.flow));
   });
 });
@@ -44,8 +41,7 @@ describe("project loader", () => {
     expect(isProjectDir(at("fixtures"))).toBe(false);
 
     const project = await loadProject(at("fixtures/app"));
-    expect(project.app.namePrefix).toBe("test_");
-    expect(project.app.defaultWaba).toBe("dev");
+    expect(project.app.version).toBe("7.2");
     expect(project.flowFiles.map((f) => path.basename(f))).toEqual(["login.tsx", "signup.tsx"]);
   });
 });

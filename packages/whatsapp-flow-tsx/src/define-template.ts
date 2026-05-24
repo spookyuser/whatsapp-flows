@@ -6,7 +6,7 @@ export type TemplateCategory = "MARKETING" | "UTILITY" | "AUTHENTICATION";
  * template `.tsx` file. Its presence is what marks a file as a template (rather
  * than a flow) to the compiler. */
 export interface TemplateConfig {
-  /** Template name. Defaults to the app `namePrefix` + file basename, lowercased.
+  /** Template name. Defaults to the file basename, lowercased.
    * Must match `[a-z0-9_]+`. */
   name?: string;
   /** Language/locale code, e.g. "en_US". Defaults to the app `language` or "en_US". */

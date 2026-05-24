@@ -30,24 +30,24 @@ full app layout, the CLI, images, and Flow authoring, see the companion
 import { defineFlowsApp } from "whatsapp-flow-tsx";
 
 export default defineFlowsApp({
-  namePrefix: "acme_",       // file name → asset name (welcome.tsx → acme_welcome)
   language: "en_US",         // default language for templates that don't set their own
-  // Fake WABA ids — replace with your own. `flows push` targets `defaultWaba`.
+  // Fake WABA ids — replace with your own. `flows push` targets `dev` by
+  // default (override with `defaultWaba`).
   wabas: { prod: { id: "111111111111111" }, dev: { id: "222222222222222" } },
-  defaultWaba: "dev",
 });
 ```
 
 ## A template is a file
 
 ```tsx
-// flows/welcome.tsx  →  template "acme_welcome"
+// flows/welcome.tsx  →  template "welcome"
 import { defineTemplate, Template, v, tpl } from "whatsapp-flow-tsx";
 
 export const template = defineTemplate({ category: "MARKETING" });
 // category: MARKETING | UTILITY | AUTHENTICATION (required).
-// language defaults to the app `language` or "en_US"; name defaults to
-// namePrefix + filename (lowercased); allowCategoryChange defaults to false.
+// language defaults to the app `language` or "en_US"; name defaults to the
+// filename (lowercased) and can be set per-template; allowCategoryChange
+// defaults to false.
 
 export default function Welcome() {
   const name = v("name", "Sam");            // a variable + its example, declared once

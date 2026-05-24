@@ -10,7 +10,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../..");
 const at = (p: string): string => path.join(root, p);
 
-const app = { namePrefix: "acme_", language: "en_US" };
+const app = { language: "en_US" };
 type Comp = Record<string, unknown>;
 const byType = (t: { components: Comp[] }, type: string): Comp =>
   t.components.find((c) => c.type === type)!;
@@ -18,7 +18,7 @@ const byType = (t: { components: Comp[] }, type: string): Comp =>
 describe("template compilation", () => {
   it("compiles a marketing template with header/body/footer/buttons", async () => {
     const t = await compileTemplateFile(at("fixtures/mixed-app/welcome.tsx"), app);
-    expect(t.name).toBe("acme_welcome");
+    expect(t.name).toBe("welcome");
     expect(t.language).toBe("en_US");
     expect(t.category).toBe("MARKETING");
     expect(t.payload.allow_category_change).toBe(false);
@@ -48,7 +48,7 @@ describe("template compilation", () => {
 
   it("carries a variable into a URL button and fills its example", async () => {
     const t = await compileTemplateFile(at("fixtures/mixed-app/order-update.tsx"), app);
-    expect(t.name).toBe("acme_order_update");
+    expect(t.name).toBe("order_update");
     expect(t.category).toBe("UTILITY");
 
     expect(byType(t, "BODY")).toEqual({

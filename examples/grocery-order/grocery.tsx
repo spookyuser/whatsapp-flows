@@ -1,5 +1,6 @@
 import {
   Complete,
+  defineFlow,
   Dropdown,
   Footer,
   Form,
@@ -11,6 +12,8 @@ import {
   data,
   field,
 } from "whatsapp-flow-tsx";
+
+export const flow = defineFlow({ categories: ["LEAD_GENERATION"] });
 
 export function Index() {
   return (

@@ -19,7 +19,7 @@ import { defineTemplate, Template, v, tpl } from "whatsapp-flow-tsx";
 export const template = defineTemplate({
   category: "MARKETING",          // MARKETING | UTILITY | AUTHENTICATION  (required)
   // language: "en_US",           // defaults to app `language`, else "en_US"
-  // name: "acme_welcome",        // defaults to namePrefix + filename, lowercased
+  // name: "welcome",             // defaults to filename, lowercased
   // allowCategoryChange: false,  // default false: Meta must approve THIS category
 });
 
@@ -105,7 +105,7 @@ The `Welcome` template above compiles to exactly the payload Meta's
 
 ```json
 {
-  "name": "acme_welcome",
+  "name": "welcome",
   "language": "en_US",
   "category": "MARKETING",
   "allow_category_change": false,

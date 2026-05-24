@@ -1,6 +1,5 @@
 export interface FlowConfig {
-  /** Flow name (Meta flow asset name). Optional — defaults to the project
-   * `namePrefix` + the flow's file basename. */
+  /** Flow name (Meta flow asset name). Defaults to the flow's file basename. */
   name?: string;
   /** Flow JSON version, e.g. "7.2". */
   version?: string;
@@ -8,7 +7,7 @@ export interface FlowConfig {
   dataApiVersion?: string;
   /** Optional endpoint URI for data exchange. */
   endpointUri?: string;
-  /** Optional Meta flow categories. */
+  /** Meta flow categories for this flow. */
   categories?: string[];
 }
 
@@ -29,10 +28,6 @@ export interface WabaConfig {
 export interface FlowsAppConfig {
   /** Default Flow JSON version applied to flows that don't set their own. */
   version?: string;
-  /** Prefix prepended to file-derived flow and template names, e.g. "cart_". */
-  namePrefix?: string;
-  /** Default categories for flows that don't set their own. */
-  categories?: string[];
   /** Default language/locale for message templates that don't set their own.
    * Defaults to "en_US". */
   language?: string;

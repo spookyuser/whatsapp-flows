@@ -37,8 +37,8 @@ export async function compileFlowFile(
   const cfg = (mod.flow ?? {}) as FlowConfig;
 
   const version = cfg.version ?? app.version ?? DEFAULT_VERSION;
-  const categories = cfg.categories ?? app.categories;
-  const name = cfg.name ?? (app.namePrefix ?? "") + fileToFlowName(file);
+  const categories = cfg.categories;
+  const name = cfg.name ?? fileToFlowName(file);
 
   // Screen exports: PascalCase function exports (excludes `flow` and helpers).
   const screenExports = Object.entries(mod).filter(

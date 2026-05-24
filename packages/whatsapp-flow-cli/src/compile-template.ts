@@ -48,7 +48,7 @@ export async function compileTemplateFile(
     );
   }
 
-  const name = (cfg.name ?? (app.namePrefix ?? "") + fileToTemplateName(file)).toLowerCase();
+  const name = (cfg.name ?? fileToTemplateName(file)).toLowerCase();
   if (!NAME_RE.test(name)) {
     throw new FlowCompileError(
       `Template name "${name}" is invalid — Meta names must be lowercase letters, numbers, and underscores only.`,

@@ -1,6 +1,6 @@
 import { Screen, Form, TextInput, Footer, Next, Complete, field } from "whatsapp-flow-tsx";
 
-// No `flow` export → name derived from filename + namePrefix → "test_signup".
+// No `flow` export → name derived from filename → "signup".
 // `Index` is the start ("/"); `Details` routes to "/details" (export-name → route).
 export function Index() {
   return (

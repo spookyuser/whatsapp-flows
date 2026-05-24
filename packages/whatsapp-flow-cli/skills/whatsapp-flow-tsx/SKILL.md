@@ -52,11 +52,9 @@ import { defineFlowsApp } from "whatsapp-flow-tsx";
 
 export default defineFlowsApp({
   version: "7.3",            // default Flow JSON version for every flow
-  namePrefix: "acme_",       // file name → flow name (grocery.tsx → acme_grocery)
-  categories: ["SIGN_IN"],   // default categories
-  // Fake WABA ids — replace with your own. `flows push` targets `defaultWaba`.
+  // Fake WABA ids — replace with your own. `flows push` targets `dev` by
+  // default (override with `defaultWaba`).
   wabas: { prod: { id: "111111111111111" }, dev: { id: "222222222222222" } },
-  defaultWaba: "dev",
 });
 ```
 
@@ -66,9 +64,9 @@ export default defineFlowsApp({
 import { defineFlow, Screen, Form, TextArea, TextBody, Footer, Next, Complete, field } from "whatsapp-flow-tsx";
 
 export const flow = defineFlow({
-  // name defaults to namePrefix + filename ("acme_grocery"); override here.
+  // name defaults to the filename ("grocery"); set `name` to override.
   categories: ["LEAD_GENERATION"],
-  // version + categories inherit the app; dataApiVersion + endpointUri are per-flow.
+  // version inherits the app; dataApiVersion + endpointUri are per-flow.
 });
 
 export function Index() {                  // required: start screen at "/" → id START

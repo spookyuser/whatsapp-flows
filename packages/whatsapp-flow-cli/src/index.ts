@@ -5,6 +5,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { compileFlow, writeFlow } from "./build.ts";
+import { runIds } from "./ids.ts";
 import { renderInspect } from "./inspect.ts";
 import { isProjectDir } from "./project.ts";
 import { buildProject, checkProject, inspectProject, pushProject } from "./push.ts";
@@ -12,7 +13,9 @@ import { buildProject, checkProject, inspectProject, pushProject } from "./push.
 export { compileFlow, writeFlow } from "./build.ts";
 export { renderInspect } from "./inspect.ts";
 export { compileFlowFile } from "./single-file.ts";
+export { compileTemplateFile, type CompiledTemplate } from "./compile-template.ts";
 export { pushProject, checkProject, buildProject } from "./push.ts";
+export { runIds, buildIdMap, selectWaba, type IdMap } from "./ids.ts";
 
 function reportError(e: unknown): never {
   if (e instanceof FlowCompileErrors) {
@@ -114,6 +117,21 @@ export function makeProgram(): Command {
           dryRun: opts.dryRun,
           waba: opts.waba,
         });
+      } catch (e) {
+        reportError(e);
+      }
+    });
+
+  program
+    .command("ids")
+    .argument("[dir]", "flows app dir (contains flows.config.ts)")
+    .option("--waba <target>", "dev | prod | WABA label (default: flows.config defaultWaba)")
+    .option("--env", "print as WHATSAPP_FLOWS='{...}' (one line, for a .env file)")
+    .option("--out <path>", "write a typed TS module (export const WHATSAPP_FLOWS) to <path>")
+    .description("Print locked Meta asset ids ({ flows, templates }) for a WABA, from flows.lock.json")
+    .action(async (dir: string | undefined, opts: { waba?: string; env?: boolean; out?: string }) => {
+      try {
+        await runIds(resolveTarget(dir), { waba: opts.waba, env: opts.env, out: opts.out });
       } catch (e) {
         reportError(e);
       }

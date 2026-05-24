@@ -1,9 +1,9 @@
 ---
 name: whatsapp-flow-tsx
-description: Author, compile, and push WhatsApp Flows written as TypeScript/TSX. Use whenever the user wants to write, build, create, scaffold, edit, compile, or deploy a WhatsApp/Meta Flow — multi-screen flows, screens, forms and inputs (text, dropdown, radio, checkbox, chips, date/calendar, photo/document pickers), navigation lists, image carousels, If/Switch UI, routing between screens, data-exchange screens, or embedding images — even if they don't say "TSX". Also for fixing flow build/validation errors and for `flows push` (syncing compiled flows to Meta as drafts, optionally publishing). Flows are single .tsx files in a flows/ app directory (with flows.config.ts); images come from the app's public/ dir. Prefer this over hand-writing raw Flow JSON. For lower-level Meta lifecycle on existing flows — listing, preview, deprecating, deleting, sending, migrating between WABAs, or status — use a Meta Graph API flow-CRUD skill; not for general WhatsApp messaging or message templates.
+description: Author, compile, and push WhatsApp Flows written as TypeScript/TSX. Use whenever the user wants to write, build, edit, compile, validate, or deploy a WhatsApp/Meta Flow (multi-screen forms, text/number/date inputs, dropdown/radio/checkbox/chips pickers, navigation lists, image carousels, If/Switch conditionals, routing, data-exchange endpoints, embedded images) — even if they don't say "TSX". Also for fixing flow build/validation errors and for `flows push` (syncing flows to Meta as drafts, optionally publishing). Flows are .tsx files in a flows/ app directory with flows.config.ts. Prefer this over hand-writing raw Flow JSON. To author WhatsApp message templates (pre-approved messages with {{1}} variables, header/body/footer, buttons), use the companion whatsapp-template-tsx skill instead. For lower-level Graph API lifecycle on existing flows — list, preview, deprecate, delete, send to a user, migrate, status — use a Meta Graph API CRUD workflow; not for general WhatsApp messaging.
 ---
 
-# WhatsApp Flow authoring (TSX → Flow JSON)
+# WhatsApp Flow authoring (TSX → Meta Flow JSON)
 
 Author WhatsApp Flows as typed `.tsx` files and compile them to Meta Flow JSON.
 **This is a compile-time authoring layer, not a runtime.** The `.tsx` runs once, at
@@ -11,18 +11,23 @@ build time, to emit an ordinary Flow JSON document. There is no React, no DOM, n
 hooks, no device-side state — WhatsApp renders the compiled JSON natively. The TSX
 is just a typed, validated way to *write* that JSON.
 
-This skill covers the whole loop: write `.tsx`, compile, and **push** flows to Meta
-as drafts (`flows push`, optionally `--publish`). Lower-level Meta lifecycle on
-existing flows — preview, deprecate, delete, send, migrate, status — belongs to a
-separate Meta Graph API flow-CRUD skill (referenced as **`whatsapp-flow-crud`**
-below), which owns those Graph API operations and the WABA/phone-number ids.
+The same `flows/` app also authors **WhatsApp message templates** (the pre-approved
+text/media messages you *send* to start a conversation). Those are a separate asset
+with their own authoring rules — see the companion **`whatsapp-template-tsx`** skill.
+
+This skill covers the whole flow loop: write `.tsx`, compile, and **push** to Meta
+(`flows push`) — flows as drafts (optionally `--publish`). Lower-level Meta lifecycle
+on existing assets — preview, deprecate, delete, send, migrate, status — belongs to a
+Meta Graph API CRUD workflow that owns those Graph API operations and the WABA /
+phone-number ids (see [Handoff](#handoff-lower-level-lifecycle)).
 
 ## Where things live
 
 - **A flows app** is a `flows/` directory, organized Next.js-style. `flows.config.ts`
   is the project config; **each top-level `.tsx` file is one flow** (e.g.
-  `flows/woolworths-login.tsx`). `flows.lock.json` (committed) maps each flow to its
-  Meta id per WABA.
+  `flows/woolworths-login.tsx`) — or a **message template** if it exports `template`
+  (that's the `whatsapp-template-tsx` skill's job). `flows.lock.json` (committed) maps
+  each flow/template to its Meta id per WABA.
 - **Images** live in the host app's `public/` directory and are embedded as base64 at
   compile time (see [Images](#images)).
 - **The compiler** is the `whatsapp-flow` CLI, shipped by the `whatsapp-flow-cli`
@@ -49,8 +54,9 @@ export default defineFlowsApp({
   version: "7.3",            // default Flow JSON version for every flow
   namePrefix: "acme_",       // file name → flow name (grocery.tsx → acme_grocery)
   categories: ["SIGN_IN"],   // default categories
-  wabas: { prod: { id: "…" }, dev: { id: "…" } },
-  defaultWaba: "dev",        // which WABA `flows push` targets
+  // Fake WABA ids — replace with your own. `flows push` targets `defaultWaba`.
+  wabas: { prod: { id: "111111111111111" }, dev: { id: "222222222222222" } },
+  defaultWaba: "dev",
 });
 ```
 
@@ -110,6 +116,10 @@ pnpm flows push --dry-run    # show what would sync to Meta (create/update/skip)
 pnpm flows push              # sync drafts to Meta (needs WHATSAPP_ACCESS_TOKEN)
 pnpm flows push --publish    # sync + publish (goes live)
 pnpm flows push --waba both  # target every configured WABA (default: defaultWaba)
+
+pnpm flows ids                 # locked Meta ids → { flows, templates } JSON for one WABA
+pnpm flows ids --env           # WHATSAPP_FLOWS='{...}' one-liner for a .env file
+pnpm flows ids --out app/whatsapp-flows.ts   # typed `export const WHATSAPP_FLOWS … as const`
 ```
 
 `push` needs `WHATSAPP_ACCESS_TOKEN` in the environment (e.g. load `.env.local` with
@@ -118,6 +128,13 @@ flow: **creates** a Meta draft if new (adopting a live flow by matching name on 
 push), **replaces** the JSON if its content hash changed, or **skips** it if
 unchanged — bumping `rev` in `flows.lock.json`. Publishing only happens with
 `--publish`. `inspect` is a text outline, not a faithful render of WhatsApp's UI.
+
+`ids` reads `flows.lock.json` (no network) and emits the deployed Meta asset ids for
+one WABA as `{ flows: {…}, templates: {…} }`, keyed by full asset name. Ids differ per
+WABA, so it takes a single `--waba` (default `defaultWaba`); `--waba both` is rejected.
+Use `--env` to get a `WHATSAPP_FLOWS='{…}'` line for `.env`, or `--out <file>` to write
+a typed `export const WHATSAPP_FLOWS = {…} as const` module to import in app code. Run
+it after `push`, since it only knows ids that are already locked.
 
 ## Reference helpers
 
@@ -197,12 +214,13 @@ to downgrade them to console warnings.
 
 ## Handoff: lower-level lifecycle
 
-`flows push` handles compile + create/update drafts (and `--publish`). For
-everything else on flows already on Meta — **preview, deprecate, delete, send a
-flow to a user, migrate between WABAs, list, or check status/validation** — use a
-Meta Graph API flow-CRUD skill (the **`whatsapp-flow-crud`** skill), which owns those
-Graph API operations and the dev/prod WABA + phone-number ids. Don't reimplement
-those here.
+`flows push` handles compile + create/update flow drafts (and `--publish`). For
+everything else on flows already on Meta — **preview, deprecate, delete, send a flow
+to a user, migrate between WABAs, list, or check status/approval** — use a Meta Graph
+API CRUD workflow (the `POST/GET/DELETE /{flow_id}` and `/{WABA_ID}/flows` endpoints),
+which owns those Graph API operations and the dev/prod WABA + phone-number ids. Don't
+reimplement those here. For **message templates** (a different asset entirely), use
+the **`whatsapp-template-tsx`** skill.
 
 ## Sharp edges
 

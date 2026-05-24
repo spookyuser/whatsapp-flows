@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { compileFlowFile } from "../src/single-file.ts";
-import { hashFlow } from "../src/lockfile.ts";
+import { hashJson } from "../src/lockfile.ts";
 import { isProjectDir, loadProject } from "../src/project.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -34,7 +34,7 @@ describe("single-file flows", () => {
   it("produces a stable content hash across recompiles (change detection)", async () => {
     const a = await compileFlowFile(at("fixtures/app/login.tsx"), { namePrefix: "test_" });
     const b = await compileFlowFile(at("fixtures/app/login.tsx"), { namePrefix: "test_" });
-    expect(hashFlow(a.flow)).toBe(hashFlow(b.flow));
+    expect(hashJson(a.flow)).toBe(hashJson(b.flow));
   });
 });
 

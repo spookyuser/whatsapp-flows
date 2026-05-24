@@ -264,8 +264,7 @@ territory, not part of authoring here.
 Note: only `data_api_version` is emitted into `flow.json`. `endpointUri` is **not**
 in the compiled JSON and `flows push` does **not** configure it — it's an
 asset-level setting (Meta's `endpoint_uri`/Builder) applied separately via the Graph
-API (the `whatsapp-flow-crud` skill), so don't be alarmed when you don't see the URL
-in the output.
+API, so don't be alarmed when you don't see the URL in the output.
 
 **Important limitation — choice options are static, not endpoint-driven.** This
 framework does **not** let you bind a `Dropdown`/`RadioButtonsGroup`/`CheckboxGroup`/

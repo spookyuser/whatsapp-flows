@@ -100,3 +100,50 @@ export async function uploadFlowJson(flowId: string, flow: unknown, token: strin
 export async function publishFlow(flowId: string, token: string): Promise<void> {
   await graph(`${flowId}/publish`, token, { method: "POST" });
 }
+
+// --- message templates -----------------------------------------------------
+
+export interface MetaTemplate {
+  id: string;
+  name?: string;
+  language?: string;
+  status?: string;
+  category?: string;
+}
+
+/** Find a template by exact name + language on a WABA, or null. */
+export async function findTemplateByName(
+  wabaId: string,
+  name: string,
+  language: string,
+  token: string,
+): Promise<MetaTemplate | null> {
+  const data = (await graph(`${wabaId}/message_templates`, token, {
+    query: { fields: "id,name,language,status,category", limit: "200" },
+  })) as { data?: MetaTemplate[] };
+  return (data.data ?? []).find((t) => t.name === name && t.language === language) ?? null;
+}
+
+/** Create a message template. Returns its id and (pending) review status. */
+export async function createTemplate(
+  wabaId: string,
+  payload: Record<string, unknown>,
+  token: string,
+): Promise<{ id: string; status?: string }> {
+  const data = (await graph(`${wabaId}/message_templates`, token, {
+    method: "POST",
+    body: payload,
+  })) as { id?: string; status?: string };
+  if (!data.id) throw new FlowCompileError(`Meta create template "${String(payload.name)}" returned no id.`);
+  return { id: data.id, status: data.status };
+}
+
+/** Edit an existing template's components in place. Meta only permits this in
+ * certain review states (not PENDING); the Graph error is surfaced otherwise. */
+export async function editTemplate(
+  templateId: string,
+  components: unknown[],
+  token: string,
+): Promise<void> {
+  await graph(`${templateId}`, token, { method: "POST", body: { components } });
+}

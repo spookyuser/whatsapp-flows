@@ -4,17 +4,22 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export interface LockEntry {
-  /** Meta flow id (WABA-scoped). */
+  /** Meta asset id (WABA-scoped). */
   id: string;
-  /** Deploy revision; bumps each time the compiled JSON changes. */
+  /** Deploy revision; bumps each time the compiled content changes. */
   rev: number;
-  /** Content hash of the compiled flow JSON. */
+  /** Content hash of the compiled flow JSON / template payload. */
   hash: string;
+  /** Asset kind. Absent on legacy entries, which are flows. */
+  kind?: "flow" | "template";
+  /** Last known Meta review status (templates only), e.g. "PENDING". */
+  status?: string;
 }
 
 export interface Lockfile {
   version: number;
-  /** waba label -> flow name -> entry. Flow ids differ per WABA. */
+  /** waba label -> asset key -> entry. Flow keys are the flow name; template
+   * keys are `tpl:<name>@<language>`. Asset ids differ per WABA. */
   wabas: Record<string, Record<string, LockEntry>>;
 }
 
@@ -40,8 +45,9 @@ export async function writeLock(flowsDir: string, lock: Lockfile): Promise<void>
   await writeFile(lockPath(flowsDir), JSON.stringify(lock, null, 2) + "\n", "utf8");
 }
 
-/** Stable content hash of a compiled flow. assembleFlow output is deterministic
- * (screens ordered, edges sorted), so JSON.stringify is reproducible. */
-export function hashFlow(flow: unknown): string {
-  return createHash("sha256").update(JSON.stringify(flow)).digest("hex").slice(0, 16);
+/** Stable content hash of a compiled asset. Compiler output is deterministic
+ * (flow screens ordered/edges sorted; template keys emitted in fixed order), so
+ * JSON.stringify is reproducible. */
+export function hashJson(value: unknown): string {
+  return createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 16);
 }

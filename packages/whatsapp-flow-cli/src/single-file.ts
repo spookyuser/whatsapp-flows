@@ -33,8 +33,9 @@ const DEFAULT_VERSION = "7.3";
 export async function compileFlowFile(
   file: string,
   app: FlowsAppConfig = {},
+  preloaded?: Record<string, unknown>,
 ): Promise<CompiledFlow> {
-  const mod = await loadModule(file);
+  const mod = preloaded ?? (await loadModule(file));
   const cfg = (mod.flow ?? {}) as FlowConfig;
 
   const version = cfg.version ?? app.version ?? DEFAULT_VERSION;

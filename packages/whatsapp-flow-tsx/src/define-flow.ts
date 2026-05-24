@@ -34,10 +34,13 @@ export interface WabaConfig {
 export interface FlowsAppConfig {
   /** Default Flow JSON version applied to flows that don't set their own. */
   version?: string;
-  /** Prefix prepended to file-derived flow names, e.g. "pelicart_". */
+  /** Prefix prepended to file-derived flow and template names, e.g. "cart_". */
   namePrefix?: string;
   /** Default categories for flows that don't set their own. */
   categories?: string[];
+  /** Default language/locale for message templates that don't set their own.
+   * Defaults to "en_US". */
+  language?: string;
   /** Treat warnings as errors. Defaults to true. */
   strict?: boolean;
   /** Named deploy targets, e.g. { prod: { id: "…" }, dev: { id: "…" } }. */

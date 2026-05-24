@@ -1,7 +1,8 @@
 # whatsapp-flows
 
 Author **Meta WhatsApp Flows** as TypeScript/TSX files with a tiny, Next.js-style
-file-based router, compile them to valid **Flow JSON**, and push them to Meta.
+file-based router, compile them to valid **Flow JSON**, and push them to Meta —
+along with **message templates**, authored the same way in the same app.
 
 > **This is a compile-time authoring layer, not a runtime.** Your `.tsx` files are
 > never executed inside WhatsApp. They run **once, at build time**, to produce an
@@ -21,8 +22,8 @@ screen as a typed component, infers the routing model from your `<Next>` /
 | Package | Purpose |
 | --- | --- |
 | `whatsapp-flow-core` | Flow JSON types, component registry, generated JSON Schema + Ajv verifier, reference helpers, normalizer, validator. Usable without TSX. |
-| `whatsapp-flow-tsx` | Custom JSX runtime + authoring components (`Screen`, `Form`, `TextArea`, `Next`, …) + `defineFlow` / `defineFlowsApp`. No React. |
-| `whatsapp-flow-cli` | Flow discovery, route→screen-id mapping, routing model, validation, image encoding, the Meta push pipeline, and the `whatsapp-flow` CLI. |
+| `whatsapp-flow-tsx` | Custom JSX runtime + authoring components (`Screen`, `Form`, `TextArea`, `Next`, …) + `defineFlow` / `defineFlowsApp`, plus message-template components (`Template`, `v`, `tpl`) + `defineTemplate`. No React. |
+| `whatsapp-flow-cli` | Flow discovery, route→screen-id mapping, routing model, validation, image encoding, template compilation, the Meta push pipeline (flows + templates), and the `whatsapp-flow` CLI. |
 
 ## A flows app
 
@@ -110,14 +111,77 @@ To make the JSX type-check in your editor, point TypeScript at the custom runtim
 
 (Compilation itself uses esbuild and doesn't depend on this — it's for editor types.)
 
+## Message templates
+
+The same app can also hold **WhatsApp message templates** — the pre-approved
+text/media messages you send to *start* a conversation (order updates, marketing
+blasts), as opposed to interactive flows. A `.tsx` file is a template when it
+exports `template` (a `defineTemplate({...})` config) instead of screens; it lives
+in the same `flows/` directory and pushes to the same WABAs.
+
+```tsx
+// flows/welcome.tsx  →  template "acme_welcome"
+import { defineTemplate, Template, v } from "whatsapp-flow-tsx";
+
+export const template = defineTemplate({ category: "MARKETING" });
+
+export default function Welcome() {
+  const name = v("name", "Sam");            // a variable and its example, in one place
+  return (
+    <Template>
+      <Template.Header>Welcome to Acme, {name}</Template.Header>
+      <Template.Body>
+        Hey {name}, you're user #{v("number", "42")}. Thanks for joining.
+      </Template.Body>
+      <Template.Footer>Reply STOP to unsubscribe</Template.Footer>
+      <Template.Buttons>
+        <Template.URL text="Open Acme" url="https://acme.com/welcome" />
+        <Template.Reply>Not now</Template.Reply>
+      </Template.Buttons>
+    </Template>
+  );
+}
+```
+
+**Variables and examples, in one place.** Meta wants `{{1}}`-style placeholders in
+the text *and* a parallel array of example values for review — kept in sync by
+hand, this is the most error-prone part of a template. Here you declare a variable
+once with `v("name", "example")`, drop it straight into the text, and the compiler
+numbers the placeholders **per component** (deduping repeats) and assembles the
+example arrays. The `welcome` template above compiles to:
+
+```json
+{ "type": "HEADER", "format": "TEXT", "text": "Welcome to Acme, {{1}}",
+  "example": { "header_text": ["Sam"] } },
+{ "type": "BODY", "text": "Hey {{1}}, you're user #{{2}}. Thanks for joining.",
+  "example": { "body_text": [["Sam", "42"]] } }
+```
+
+For a variable inside a string prop — e.g. the dynamic suffix of a URL button — use
+the `` tpl`…` `` tagged template, which carries the same `v(...)` into the string
+and fills the example URL automatically:
+
+```tsx
+<Template.URL text="Track order" url={tpl`https://acme.com/track/${v("order", "A1234")}`} />
+// → url "https://acme.com/track/{{1}}", example ["https://acme.com/track/A1234"]
+```
+
+`defineTemplate` fields: `category` (`MARKETING` | `UTILITY` | `AUTHENTICATION`,
+required), `language` (defaults to the app `language` or `en_US`), `name` (defaults
+to `namePrefix` + filename, lowercased), and `allowCategoryChange` (default `false`,
+so Meta must approve the category you chose rather than silently re-categorizing).
+Compile-time checks enforce Meta's structural rules: exactly one body, at most one
+variable in a header, no variables in a footer, a single trailing variable in a URL,
+and a non-empty example for every variable.
+
 ## CLI
 
 ```bash
-# Flows app (run from the app root; no path needed — acts on every flow)
-whatsapp-flow check                  # validate every flow
-whatsapp-flow inspect                # outline every flow: routes, ids, transitions
-whatsapp-flow build                  # compile all → flows/.build/<name>.json
-whatsapp-flow push --dry-run         # show what would sync to Meta (create/update/skip)
+# Flows app (run from the app root; no path needed — acts on every flow + template)
+whatsapp-flow check                  # validate every flow and template
+whatsapp-flow inspect                # outline each flow (routes/ids) and template (text/vars)
+whatsapp-flow build                  # compile all → flows/.build/ (<name>.json, <name>.template.json)
+whatsapp-flow push --dry-run         # show what would sync to Meta (create/update/edit/skip)
 whatsapp-flow push                   # sync drafts to Meta
 whatsapp-flow push --publish         # sync + publish (goes live)
 whatsapp-flow push --waba both       # target every configured WABA (default: defaultWaba)
@@ -148,6 +212,13 @@ per-screen outline) — **not** a faithful render of WhatsApp's UI.
 - **Update** — a changed flow's JSON is re-uploaded to its existing draft.
 - **Versioning** — `rev` in the lockfile bumps on every change.
 - **Publish gate** — drafts are synced by default; going live requires `--publish`.
+
+**Templates** ride the same pipeline and lockfile. A template with no lock entry
+(and no live template of the same name + language) is **created**, which submits it
+to Meta for review; a changed template is **edited** in place; an unchanged one is
+**skipped**. `--publish` doesn't apply — templates go live through Meta's async
+review rather than a publish call — and the lockfile records each template's last
+known review status (e.g. `PENDING`). Template keys are scoped `tpl:<name>@<language>`.
 
 `push` needs a Meta access token in the environment — `WHATSAPP_ACCESS_TOKEN` by
 default, or the env var named by `tokenEnv` in `flows.config.ts`. Load it however you
@@ -299,18 +370,24 @@ pnpm -r typecheck   # tsc --noEmit per package
 pnpm test           # vitest (unit + compiler e2e + snapshots)
 ```
 
-`fixtures/app` is a single-file flows-app fixture; `examples/grocery-order` is a
-complete folder-model flow with its compiled `flow.json`.
+`fixtures/app` is a single-file flows-app fixture; `fixtures/mixed-app` mixes a flow
+with message templates; `examples/grocery-order` is a complete folder-model flow with
+its compiled `flow.json`.
 
 ## Status & scope
 
 Focused on **correctness**: the full component catalog, compiling to valid Flow JSON
 (default version `7.3`), with formal JSON-Schema verification — plus a `push`
-pipeline that syncs drafts to Meta (optionally publishing) with lockfile-based change
-detection. Component shapes follow Meta's official Flow JSON / Components docs;
-confirm the exact `version` value against Meta's current docs before shipping a
-production flow.
+pipeline that syncs flow drafts to Meta (optionally publishing) and creates/edits
+message templates, with lockfile-based change detection. Component shapes follow
+Meta's official Flow JSON / Components docs; confirm the exact `version` value
+against Meta's current docs before shipping a production flow.
 
-The `whatsapp-flow-tsx` authoring skill lives in [`skills/`](skills/whatsapp-flow-tsx).
-Lower-level Meta lifecycle on existing flows (preview, deprecate, delete, send,
-migrate, status) is out of scope here — handle it via the Graph API directly.
+Two authoring skills ship inside the `whatsapp-flow-cli` package so they travel with
+the dependency — [`whatsapp-flow-tsx`](packages/whatsapp-flow-cli/skills/whatsapp-flow-tsx)
+(Flows) and [`whatsapp-template-tsx`](packages/whatsapp-flow-cli/skills/whatsapp-template-tsx)
+(message templates). A host app that depends on `whatsapp-flow-cli` can discover and
+install them with [`npx skills experimental_sync`](https://skills.sh), which scans
+`node_modules` for `skills/` directories. Lower-level Meta lifecycle on existing assets
+(preview, deprecate, delete, send a flow or template to a user, migrate, status) is out
+of scope here — handle it via the Graph API directly.

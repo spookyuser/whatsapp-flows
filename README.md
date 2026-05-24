@@ -4,18 +4,10 @@ Author **Meta WhatsApp Flows** as TypeScript/TSX files with a tiny, Next.js-styl
 file-based router, compile them to valid **Flow JSON**, and push them to Meta —
 along with **message templates**, authored the same way in the same app.
 
-> **This is a compile-time authoring layer, not a runtime.** Your `.tsx` files are
-> never executed inside WhatsApp. They run **once, at build time**, to produce an
-> ordinary Flow JSON document that is uploaded to Meta. There is no React, no DOM,
-> no hooks, and no client-side state on the device — WhatsApp renders the compiled
-> JSON natively. The TSX is just a typed, ergonomic way to *write* that JSON.
 
 ## Why
 
-Flow JSON is verbose and stringly-typed, and a multi-screen flow is essentially a
-little state machine with a `routing_model`. This framework lets you write each
-screen as a typed component, infers the routing model from your `<Next>` /
-`<Exchange>` links, validates the whole thing, emits the JSON, and syncs it to Meta.
+Because
 
 ## Packages
 
@@ -102,8 +94,6 @@ To make the JSX type-check in your editor, point TypeScript at the custom runtim
 ```json
 { "compilerOptions": { "jsx": "react-jsx", "jsxImportSource": "whatsapp-flow-tsx" } }
 ```
-
-(Compilation itself uses esbuild and doesn't depend on this — it's for editor types.)
 
 ## Message templates
 
@@ -356,21 +346,3 @@ pnpm test           # vitest (unit + compiler e2e + snapshots)
 
 `fixtures/app` is a flows-app fixture; `fixtures/mixed-app` mixes a flow with
 message templates; `examples/grocery-order` is a complete flows-app example.
-
-## Status & scope
-
-Focused on **correctness**: the full component catalog, compiling to valid Flow JSON
-(default version `7.3`), with formal JSON-Schema verification — plus a `push`
-pipeline that syncs flow drafts to Meta (optionally publishing) and creates/edits
-message templates, with lockfile-based change detection. Component shapes follow
-Meta's official Flow JSON / Components docs; confirm the exact `version` value
-against Meta's current docs before shipping a production flow.
-
-Two authoring skills ship inside the `whatsapp-flow-cli` package so they travel with
-the dependency — [`whatsapp-flow-tsx`](packages/whatsapp-flow-cli/skills/whatsapp-flow-tsx)
-(Flows) and [`whatsapp-template-tsx`](packages/whatsapp-flow-cli/skills/whatsapp-template-tsx)
-(message templates). A host app that depends on `whatsapp-flow-cli` can discover and
-install them with [`npx skills experimental_sync`](https://skills.sh), which scans
-`node_modules` for `skills/` directories. Lower-level Meta lifecycle on existing assets
-(preview, deprecate, delete, send a flow or template to a user, migrate, status) is out
-of scope here — handle it via the Graph API directly.

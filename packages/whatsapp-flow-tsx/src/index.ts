@@ -1,6 +1,12 @@
 export * from "./components.ts";
 export * from "./actions.ts";
-export { defineFlow, type FlowConfig } from "./define-flow.ts";
+export {
+  defineFlow,
+  type FlowConfig,
+  defineFlowsApp,
+  type FlowsAppConfig,
+  type WabaConfig,
+} from "./define-flow.ts";
 export type { ScreenComponent } from "./screen.ts";
 
 // Reference helpers + shared types, re-exported for one-import authoring.

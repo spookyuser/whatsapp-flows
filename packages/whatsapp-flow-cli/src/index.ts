@@ -6,9 +6,13 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { compileFlow, writeFlow } from "./build.ts";
 import { renderInspect } from "./inspect.ts";
+import { isProjectDir } from "./project.ts";
+import { buildProject, checkProject, inspectProject, pushProject } from "./push.ts";
 
 export { compileFlow, writeFlow } from "./build.ts";
 export { renderInspect } from "./inspect.ts";
+export { compileFlowFile } from "./single-file.ts";
+export { pushProject, checkProject, buildProject } from "./push.ts";
 
 function reportError(e: unknown): never {
   if (e instanceof FlowCompileErrors) {
@@ -25,23 +29,36 @@ function printWarnings(warnings: string[]): void {
   for (const w of warnings) console.warn(`warning: ${w}`);
 }
 
+/** Resolve the target for project-aware commands. A flows app (flows.config.ts)
+ * takes precedence; otherwise the argument is treated as a single folder flow. */
+function resolveTarget(dir: string | undefined): string {
+  if (dir) return dir;
+  if (isProjectDir("flows")) return "flows";
+  return ".";
+}
+
 export function makeProgram(): Command {
   const program = new Command();
   program
     .name("whatsapp-flow")
-    .description("Compile TSX screen files into Meta WhatsApp Flow JSON.");
+    .description("Compile TSX flows into Meta WhatsApp Flow JSON, and push them to Meta.");
 
   program
     .command("build")
-    .argument("<dir>", "flow directory containing flow.config.ts and screens/")
-    .option("--out <path>", "output path for the compiled flow.json")
-    .description("Compile and write flow.json")
-    .action(async (dir: string, opts: { out?: string }) => {
+    .argument("[dir]", "flows app dir, or a single folder flow")
+    .option("--out <path>", "output path (single folder flow) or build dir (project)")
+    .description("Compile flow(s). A flows app compiles every flow to <dir>/.build/")
+    .action(async (dir: string | undefined, opts: { out?: string }) => {
       try {
-        const result = await compileFlow(dir, { out: opts.out });
-        printWarnings(result.warnings);
-        const out = await writeFlow(result);
-        console.log(`✓ Wrote ${result.flow.screens.length} screen(s) to ${out}`);
+        const target = resolveTarget(dir);
+        if (isProjectDir(target)) {
+          await buildProject(target, opts.out);
+        } else {
+          const result = await compileFlow(target, { out: opts.out });
+          printWarnings(result.warnings);
+          const out = await writeFlow(result);
+          console.log(`✓ Wrote ${result.flow.screens.length} screen(s) to ${out}`);
+        }
       } catch (e) {
         reportError(e);
       }
@@ -49,13 +66,18 @@ export function makeProgram(): Command {
 
   program
     .command("check")
-    .argument("<dir>", "flow directory")
-    .description("Validate without writing output")
-    .action(async (dir: string) => {
+    .argument("[dir]", "flows app dir, or a single folder flow")
+    .description("Validate flow(s) without writing output")
+    .action(async (dir: string | undefined) => {
       try {
-        const result = await compileFlow(dir);
-        printWarnings(result.warnings);
-        console.log(`✓ ${result.flow.screens.length} screen(s) valid`);
+        const target = resolveTarget(dir);
+        if (isProjectDir(target)) {
+          await checkProject(target);
+        } else {
+          const result = await compileFlow(target);
+          printWarnings(result.warnings);
+          console.log(`✓ ${result.flow.screens.length} screen(s) valid`);
+        }
       } catch (e) {
         reportError(e);
       }
@@ -63,12 +85,35 @@ export function makeProgram(): Command {
 
   program
     .command("inspect")
-    .argument("<dir>", "flow directory")
+    .argument("[dir]", "flows app dir, or a single folder flow")
     .description("Print the route map, screen ids, transitions, and warnings")
-    .action(async (dir: string) => {
+    .action(async (dir: string | undefined) => {
       try {
-        const result = await compileFlow(dir);
-        console.log(renderInspect(result));
+        const target = resolveTarget(dir);
+        if (isProjectDir(target)) {
+          await inspectProject(target);
+        } else {
+          console.log(renderInspect(await compileFlow(target)));
+        }
+      } catch (e) {
+        reportError(e);
+      }
+    });
+
+  program
+    .command("push")
+    .argument("[dir]", "flows app dir (contains flows.config.ts)")
+    .option("--publish", "also publish each touched flow (goes live)")
+    .option("--dry-run", "print the plan; send nothing to Meta")
+    .option("--waba <target>", "prod | dev | both | WABA_ID (default: flows.config defaultWaba)")
+    .description("Compile every flow and sync it to Meta (create/update drafts)")
+    .action(async (dir: string | undefined, opts: { publish?: boolean; dryRun?: boolean; waba?: string }) => {
+      try {
+        await pushProject(resolveTarget(dir), {
+          publish: opts.publish,
+          dryRun: opts.dryRun,
+          waba: opts.waba,
+        });
       } catch (e) {
         reportError(e);
       }

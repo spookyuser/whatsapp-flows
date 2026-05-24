@@ -14,6 +14,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { loadConfig, type ResolvedConfig } from "./config.ts";
 import { discoverScreens } from "./discover.ts";
+import { resolveImages } from "./images.ts";
 import { loadModule } from "./load-module.ts";
 import { buildRoutes, type RouteEntry } from "./routes.ts";
 
@@ -71,6 +72,10 @@ export async function compileFlow(
         { route: entry.route },
       );
     }
+    // Encode any <Image>/<CarouselImage> (and Option/NavItem image) sources that
+    // are file paths or URLs into base64, resolving relative paths against the
+    // screen file's directory.
+    await resolveImages(root, path.dirname(entry.file), entry.route);
     normalized.push(
       normalizeScreen(root, { route: entry.route, id: entry.id, resolveRoute }),
     );

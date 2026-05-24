@@ -53,6 +53,19 @@ describe("compileFlow (end-to-end)", () => {
     expect(r.flow).toMatchSnapshot();
   });
 
+  it("base64-encodes local image sources at compile time", async () => {
+    const PNG_B64 =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    const r = await compileFlow(at("fixtures/local-image"));
+    const form = r.flow.screens[0]!.layout.children[0] as { children: unknown[] };
+    const image = form.children[0] as { type: string; src: string };
+    expect(image.type).toBe("Image");
+    expect(image.src).toBe(PNG_B64);
+    const carousel = form.children[1] as { type: string; images: { src: string }[] };
+    expect(carousel.type).toBe("ImageCarousel");
+    expect(carousel.images[0]!.src).toBe(PNG_B64);
+  });
+
   it("renders an inspect report", async () => {
     const r = await compileFlow(at("examples/grocery-order"));
     const report = renderInspect(r);

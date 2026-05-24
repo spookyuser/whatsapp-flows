@@ -129,6 +129,9 @@ export function RichText(props: RichTextProps): AuthoringNode {
 export type ScaleType = "contain" | "cover";
 
 export interface ImageProps {
+  /** Image data. A local file path or http(s)/file URL is automatically
+   * base64-encoded at compile time (relative paths resolve against the screen
+   * file). A bare base64 string is also accepted as-is. */
   src: string;
   width?: number;
   height?: number;
@@ -152,7 +155,8 @@ export function ImageCarousel(props: ImageCarouselProps): AuthoringNode {
 }
 
 export interface CarouselImageProps {
-  /** Base64-encoded image data. */
+  /** Image data. A local file path or http(s)/file URL is automatically
+   * base64-encoded at compile time; a bare base64 string is accepted as-is. */
   src: string;
   altText?: string;
 }

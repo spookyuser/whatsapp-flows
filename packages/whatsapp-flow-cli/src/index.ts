@@ -4,14 +4,9 @@ import { Command } from "commander";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { compileFlow, writeFlow } from "./build.ts";
 import { runIds } from "./ids.ts";
-import { renderInspect } from "./inspect.ts";
-import { isProjectDir } from "./project.ts";
 import { buildProject, checkProject, inspectProject, pushProject } from "./push.ts";
 
-export { compileFlow, writeFlow } from "./build.ts";
-export { renderInspect } from "./inspect.ts";
 export { compileFlowFile } from "./single-file.ts";
 export { compileTemplateFile, type CompiledTemplate } from "./compile-template.ts";
 export { pushProject, checkProject, buildProject } from "./push.ts";
@@ -28,18 +23,6 @@ function reportError(e: unknown): never {
   process.exit(1);
 }
 
-function printWarnings(warnings: string[]): void {
-  for (const w of warnings) console.warn(`warning: ${w}`);
-}
-
-/** Resolve the target for project-aware commands. A flows app (flows.config.ts)
- * takes precedence; otherwise the argument is treated as a single folder flow. */
-function resolveTarget(dir: string | undefined): string {
-  if (dir) return dir;
-  if (isProjectDir("flows")) return "flows";
-  return ".";
-}
-
 export function makeProgram(): Command {
   const program = new Command();
   program
@@ -48,20 +31,12 @@ export function makeProgram(): Command {
 
   program
     .command("build")
-    .argument("[dir]", "flows app dir, or a single folder flow")
-    .option("--out <path>", "output path (single folder flow) or build dir (project)")
-    .description("Compile flow(s). A flows app compiles every flow to <dir>/.build/")
-    .action(async (dir: string | undefined, opts: { out?: string }) => {
+    .argument("[dir]", "flows app dir (contains flows.config.ts)", ".")
+    .option("--out <path>", "build dir (default: <dir>/.build)")
+    .description("Compile every flow and template to <dir>/.build/")
+    .action(async (dir: string, opts: { out?: string }) => {
       try {
-        const target = resolveTarget(dir);
-        if (isProjectDir(target)) {
-          await buildProject(target, opts.out);
-        } else {
-          const result = await compileFlow(target, { out: opts.out });
-          printWarnings(result.warnings);
-          const out = await writeFlow(result);
-          console.log(`✓ Wrote ${result.flow.screens.length} screen(s) to ${out}`);
-        }
+        await buildProject(dir, opts.out);
       } catch (e) {
         reportError(e);
       }
@@ -69,18 +44,11 @@ export function makeProgram(): Command {
 
   program
     .command("check")
-    .argument("[dir]", "flows app dir, or a single folder flow")
-    .description("Validate flow(s) without writing output")
-    .action(async (dir: string | undefined) => {
+    .argument("[dir]", "flows app dir (contains flows.config.ts)", ".")
+    .description("Validate every flow and template without writing output")
+    .action(async (dir: string) => {
       try {
-        const target = resolveTarget(dir);
-        if (isProjectDir(target)) {
-          await checkProject(target);
-        } else {
-          const result = await compileFlow(target);
-          printWarnings(result.warnings);
-          console.log(`✓ ${result.flow.screens.length} screen(s) valid`);
-        }
+        await checkProject(dir);
       } catch (e) {
         reportError(e);
       }
@@ -88,16 +56,11 @@ export function makeProgram(): Command {
 
   program
     .command("inspect")
-    .argument("[dir]", "flows app dir, or a single folder flow")
-    .description("Print the route map, screen ids, transitions, and warnings")
-    .action(async (dir: string | undefined) => {
+    .argument("[dir]", "flows app dir (contains flows.config.ts)", ".")
+    .description("Outline each flow (routes/ids/transitions) and each template")
+    .action(async (dir: string) => {
       try {
-        const target = resolveTarget(dir);
-        if (isProjectDir(target)) {
-          await inspectProject(target);
-        } else {
-          console.log(renderInspect(await compileFlow(target)));
-        }
+        await inspectProject(dir);
       } catch (e) {
         reportError(e);
       }
@@ -105,46 +68,39 @@ export function makeProgram(): Command {
 
   program
     .command("push")
-    .argument("[dir]", "flows app dir (contains flows.config.ts)")
+    .argument("[dir]", "flows app dir (contains flows.config.ts)", ".")
     .option("--publish", "also publish each touched flow (goes live)")
     .option("--dry-run", "print the plan; send nothing to Meta")
     .option("--waba <target>", "prod | dev | both | WABA_ID (default: flows.config defaultWaba)")
     .description("Compile every flow and sync it to Meta (create/update drafts)")
-    .action(
-      async (
-        dir: string | undefined,
-        opts: { publish?: boolean; dryRun?: boolean; waba?: string },
-      ) => {
-        try {
-          await pushProject(resolveTarget(dir), {
-            publish: opts.publish,
-            dryRun: opts.dryRun,
-            waba: opts.waba,
-          });
-        } catch (e) {
-          reportError(e);
-        }
-      },
-    );
+    .action(async (dir: string, opts: { publish?: boolean; dryRun?: boolean; waba?: string }) => {
+      try {
+        await pushProject(dir, {
+          publish: opts.publish,
+          dryRun: opts.dryRun,
+          waba: opts.waba,
+        });
+      } catch (e) {
+        reportError(e);
+      }
+    });
 
   program
     .command("ids")
-    .argument("[dir]", "flows app dir (contains flows.config.ts)")
+    .argument("[dir]", "flows app dir (contains flows.config.ts)", ".")
     .option("--waba <target>", "dev | prod | WABA label (default: flows.config defaultWaba)")
     .option("--env", "print as WHATSAPP_FLOWS='{...}' (one line, for a .env file)")
     .option("--out <path>", "write a typed TS module (export const WHATSAPP_FLOWS) to <path>")
     .description(
       "Print locked Meta asset ids ({ flows, templates }) for a WABA, from flows.lock.json",
     )
-    .action(
-      async (dir: string | undefined, opts: { waba?: string; env?: boolean; out?: string }) => {
-        try {
-          await runIds(resolveTarget(dir), { waba: opts.waba, env: opts.env, out: opts.out });
-        } catch (e) {
-          reportError(e);
-        }
-      },
-    );
+    .action(async (dir: string, opts: { waba?: string; env?: boolean; out?: string }) => {
+      try {
+        await runIds(dir, { waba: opts.waba, env: opts.env, out: opts.out });
+      } catch (e) {
+        reportError(e);
+      }
+    });
 
   program
     .command("schema")

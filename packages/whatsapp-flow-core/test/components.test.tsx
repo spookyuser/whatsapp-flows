@@ -249,21 +249,6 @@ describe("input components", () => {
     });
   });
 
-  it("Option title falls back to its text children", () => {
-    expect(
-      inForm(
-        <Dropdown name="d" label="D">
-          <Option id="m">Medium</Option>
-        </Dropdown>,
-      ),
-    ).toEqual({
-      type: "Dropdown",
-      name: "d",
-      label: "D",
-      "data-source": [{ id: "m", title: "Medium" }],
-    });
-  });
-
   it("OptIn with on-click-action", () => {
     expect(
       inForm(

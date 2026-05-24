@@ -11,22 +11,16 @@ export interface ScreenMeta {
 }
 
 export interface ValidateOptions {
-  strict?: boolean;
   screens?: ScreenMeta[];
   start?: string;
 }
 
-export interface ValidateResult {
-  warnings: string[];
-}
-
-/** Validate an assembled Flow JSON document. Throws FlowCompileErrors on hard
- * failures; returns collected warnings otherwise. In strict mode, warnings are
- * promoted to errors. Structural conformance is checked formally against the
- * generated JSON Schema (Ajv) via verifyFlowJson. */
-export function validateFlow(flow: FlowJson, opts: ValidateOptions = {}): ValidateResult {
+/** Validate an assembled Flow JSON document. Throws FlowCompileErrors on any
+ * failure (including dead-end screens and terminal screens without
+ * `<Complete>` — the compiler is strict). Structural conformance is checked
+ * formally against the generated JSON Schema (Ajv) via verifyFlowJson. */
+export function validateFlow(flow: FlowJson, opts: ValidateOptions = {}): void {
   const errors: FlowCompileError[] = [];
-  const warnings: string[] = [];
   const metaById = new Map((opts.screens ?? []).map((m) => [m.id, m]));
   const routeOf = (id: string): string => metaById.get(id)?.route ?? id;
 
@@ -81,7 +75,7 @@ export function validateFlow(flow: FlowJson, opts: ValidateOptions = {}): Valida
     }
   }
 
-  // 6. terminal / completion consistency (warnings unless strict)
+  // 6. terminal / completion consistency
   for (const meta of opts.screens ?? []) {
     if (meta.completes && !meta.terminal) {
       errors.push(
@@ -92,11 +86,18 @@ export function validateFlow(flow: FlowJson, opts: ValidateOptions = {}): Valida
       );
     }
     if (meta.terminal && !meta.completes) {
-      warnings.push(`Screen "${meta.route}" is terminal but has no <Complete> action.`);
+      errors.push(
+        new FlowCompileError(`Screen "${meta.route}" is terminal but has no <Complete> action.`, {
+          route: meta.route,
+        }),
+      );
     }
     if (!meta.terminal && meta.edgeCount === 0) {
-      warnings.push(
-        `Screen "${meta.route}" is not terminal and has no outgoing <Next>/<Exchange> — it is a dead end.`,
+      errors.push(
+        new FlowCompileError(
+          `Screen "${meta.route}" is not terminal and has no outgoing <Next>/<Exchange> — it is a dead end.`,
+          { route: meta.route },
+        ),
       );
     }
   }
@@ -113,13 +114,7 @@ export function validateFlow(flow: FlowJson, opts: ValidateOptions = {}): Valida
     errors.push(new FlowCompileError(`Flow JSON could not be serialized: ${String(e)}`));
   }
 
-  if (opts.strict) {
-    for (const w of warnings) errors.push(new FlowCompileError(w));
-    warnings.length = 0;
-  }
-
   if (errors.length > 0) throw new FlowCompileErrors(errors);
-  return { warnings };
 }
 
 function findUnserializable(value: unknown, path: string): string[] {

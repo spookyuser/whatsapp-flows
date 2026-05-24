@@ -21,7 +21,6 @@ export const template = defineTemplate({
   // language: "en_US",           // defaults to app `language`, else "en_US"
   // name: "acme_welcome",        // defaults to namePrefix + filename, lowercased
   // allowCategoryChange: false,  // default false: Meta must approve THIS category
-  // strict: true,
 });
 
 export default function Welcome() {

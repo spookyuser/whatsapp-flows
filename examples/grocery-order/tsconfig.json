@@ -10,5 +10,5 @@
       ]
     }
   },
-  "include": ["flow.config.ts", "screens"]
+  "include": ["flows.config.ts", "*.tsx"]
 }

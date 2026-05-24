@@ -178,7 +178,7 @@ describe("normalizeScreen", () => {
         id: "PREFERENCES",
         resolveRoute: resolver({}),
       }),
-    ).toThrow(/no screen exists at "screens\/confirm.tsx"/);
+    ).toThrow(/no screen exports that route/);
   });
 
   it("rejects unsupported components", () => {

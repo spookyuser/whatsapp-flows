@@ -1,7 +1,7 @@
 export * from "./types.ts";
 export { node, flattenChildren, isAuthoringNode, textOf } from "./node.ts";
 export { field, data, screenData, isRef, type Ref } from "./refs.ts";
-export { routeToScreenId, normalizeRoute, routeToFilePath } from "./route-id.ts";
+export { routeToScreenId, normalizeRoute } from "./route-id.ts";
 export { FlowCompileError, FlowCompileErrors } from "./errors.ts";
 export {
   normalizeScreen,
@@ -9,12 +9,7 @@ export {
   type NormalizedScreen,
 } from "./normalize.ts";
 export { assembleFlow, type AssembleOptions } from "./assemble.ts";
-export {
-  validateFlow,
-  type ValidateOptions,
-  type ValidateResult,
-  type ScreenMeta,
-} from "./validate.ts";
+export { validateFlow, type ValidateOptions, type ScreenMeta } from "./validate.ts";
 export {
   verifyFlowJson,
   buildFlowJsonSchema,

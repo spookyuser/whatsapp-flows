@@ -5,26 +5,25 @@ import path from "node:path";
 import type { FlowsAppConfig } from "whatsapp-flow-tsx";
 import { loadModule } from "./load-module.ts";
 
-const CONFIG_NAMES = ["flows.config.ts", "flows.config.js", "flows.config.mjs"];
+const CONFIG_NAME = "flows.config.ts";
 
 export interface LoadedProject {
-  /** Absolute path to the flows/ project directory. */
+  /** Absolute path to the project directory. */
   dir: string;
   app: FlowsAppConfig;
-  /** Absolute paths to each flow's single .tsx file, sorted. */
+  /** Absolute paths to each flow/template .tsx file, sorted. */
   flowFiles: string[];
 }
 
 /** True when `dir` is a flows app (has a flows.config.ts). */
 export function isProjectDir(dir: string): boolean {
-  const resolved = path.resolve(dir);
-  return CONFIG_NAMES.some((f) => existsSync(path.join(resolved, f)));
+  return existsSync(path.join(path.resolve(dir), CONFIG_NAME));
 }
 
 export async function loadProject(flowsDir: string): Promise<LoadedProject> {
   const dir = path.resolve(flowsDir);
-  const configPath = CONFIG_NAMES.map((f) => path.join(dir, f)).find((f) => existsSync(f));
-  if (!configPath) {
+  const configPath = path.join(dir, CONFIG_NAME);
+  if (!existsSync(configPath)) {
     throw new FlowCompileError(
       `No flows.config.ts in "${flowsDir}". Create one with defineFlowsApp({ ... }).`,
     );
@@ -40,7 +39,7 @@ export async function loadProject(flowsDir: string): Promise<LoadedProject> {
     .sort();
   if (flowFiles.length === 0) {
     throw new FlowCompileError(
-      `No flow files (*.tsx) found in "${dir}". Each top-level .tsx is one flow.`,
+      `No flow files (*.tsx) found in "${dir}". Each top-level .tsx is one flow or template.`,
     );
   }
 

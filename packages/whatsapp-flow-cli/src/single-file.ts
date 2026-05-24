@@ -19,7 +19,6 @@ export interface CompiledFlow {
   name: string;
   categories?: string[];
   flow: FlowJson;
-  warnings: string[];
   /** Absolute path to the source .tsx file. */
   file: string;
 }
@@ -27,9 +26,8 @@ export interface CompiledFlow {
 const DEFAULT_VERSION = "7.3";
 
 /** Compile a single-file flow: one `.tsx` module that exports `flow` (config)
- * plus one PascalCase function export per screen. The start screen is the one
- * named by `flow.start`, or named `Index`/`Start`, or the first screen export;
- * it routes to "/". Other screens route to "/<kebab-of-export-name>". */
+ * plus one PascalCase function per screen. The export named `Index` is the
+ * start screen at route "/"; every other export routes to "/<kebab-of-export-name>". */
 export async function compileFlowFile(
   file: string,
   app: FlowsAppConfig = {},
@@ -39,7 +37,6 @@ export async function compileFlowFile(
   const cfg = (mod.flow ?? {}) as FlowConfig;
 
   const version = cfg.version ?? app.version ?? DEFAULT_VERSION;
-  const strict = cfg.strict ?? app.strict ?? true;
   const categories = cfg.categories ?? app.categories;
   const name = cfg.name ?? (app.namePrefix ?? "") + fileToFlowName(file);
 
@@ -47,17 +44,16 @@ export async function compileFlowFile(
   const screenExports = Object.entries(mod).filter(
     ([key, value]) => typeof value === "function" && /^[A-Z]/.test(key),
   ) as [string, () => unknown][];
-  if (screenExports.length === 0) {
+  if (!screenExports.some(([n]) => n === "Index")) {
+    const have = screenExports.map(([n]) => n).join(", ") || "(none)";
     throw new FlowCompileError(
-      `Flow "${path.basename(file)}" has no screen exports. Export at least one PascalCase function that returns a <Screen>.`,
+      `Flow "${path.basename(file)}" must export an \`Index\` function — that's the start screen at "/". Found: ${have}.`,
     );
   }
 
-  const startExport = pickStartExport(screenExports, cfg.start);
-
   // Build the route table from export names.
   const routes = screenExports.map(([exportName, render]) => {
-    const route = exportName === startExport ? "/" : "/" + kebab(exportName);
+    const route = exportName === "Index" ? "/" : "/" + kebab(exportName);
     return { exportName, render, route, id: routeToScreenId(route) };
   });
   assertUnique(routes, file);
@@ -104,9 +100,9 @@ export async function compileFlowFile(
     hasEndpoint: Boolean(cfg.endpointUri),
   });
 
-  const { warnings } = validateFlow(flow, { strict, screens: metas, start: startId });
+  validateFlow(flow, { screens: metas, start: startId });
 
-  return { name, categories, flow, warnings, file };
+  return { name, categories, flow, file };
 }
 
 // --- helpers ---------------------------------------------------------------
@@ -126,27 +122,6 @@ function kebab(name: string): string {
     .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
     .replace(/[_\s]+/g, "-")
     .toLowerCase();
-}
-
-function pickStartExport(screens: [string, unknown][], start: string | undefined): string {
-  const names = screens.map(([n]) => n);
-  if (start) {
-    const direct = names.find((n) => n === start);
-    if (direct) return direct;
-    // start given as a route, e.g. "/": match the export whose kebab route fits.
-    const wanted = normalizeRoute(start);
-    if (wanted === "/") {
-      const indexish = names.find((n) => /^(index|start)$/i.test(n));
-      if (indexish) return indexish;
-    }
-    const byRoute = names.find((n) => "/" + kebab(n) === wanted);
-    if (byRoute) return byRoute;
-    throw new FlowCompileError(
-      `flow.start "${start}" does not match any screen export (have: ${names.join(", ")}).`,
-    );
-  }
-  const indexish = names.find((n) => /^(index|start)$/i.test(n));
-  return indexish ?? names[0]!;
 }
 
 function assertUnique(

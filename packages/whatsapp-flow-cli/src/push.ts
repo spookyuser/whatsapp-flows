@@ -23,10 +23,6 @@ import {
 import { loadProject } from "./project.ts";
 import { type CompiledFlow, compileFlowFile } from "./single-file.ts";
 
-function warn(file: string, warnings: string[]): void {
-  for (const w of warnings) console.warn(`warning: ${path.basename(file)}: ${w}`);
-}
-
 interface CompiledApp {
   app: FlowsAppConfig;
   dir: string;
@@ -45,9 +41,7 @@ async function compileAll(flowsDir: string): Promise<CompiledApp> {
     if (isTemplateModule(mod)) {
       templates.push(await compileTemplateFile(file, project.app, mod));
     } else {
-      const c = await compileFlowFile(file, project.app, mod);
-      warn(file, c.warnings);
-      flows.push(c);
+      flows.push(await compileFlowFile(file, project.app, mod));
     }
   }
   return { app: project.app, dir: project.dir, flows, templates };
@@ -166,7 +160,7 @@ export async function pushProject(flowsDir: string, opts: PushOptions = {}): Pro
   const { app, dir, flows, templates } = await compileAll(flowsDir);
   const targets = resolveTargets(app, opts.waba);
   const lock = await readLock(dir);
-  const token = opts.dryRun ? "" : getToken(app);
+  const token = opts.dryRun ? "" : getToken();
 
   const rows: Row[] = [];
   for (const target of targets) {

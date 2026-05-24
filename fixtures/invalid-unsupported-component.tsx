@@ -1,7 +1,9 @@
 // @ts-nocheck — intentionally invalid: raw HTML elements are not Flow components.
-import { Screen, Form, Footer, Complete } from "whatsapp-flow-tsx";
+import { Complete, Footer, Form, Screen, defineFlow } from "whatsapp-flow-tsx";
 
-export default function Page() {
+export const flow = defineFlow({ name: "invalid_unsupported_component" });
+
+export function Index() {
   return (
     <Screen title="Unsupported">
       <Form name="form">

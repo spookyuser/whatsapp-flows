@@ -31,14 +31,3 @@ export function normalizeRoute(route: string): string {
   if (path.length > 1 && path.endsWith("/")) path = path.slice(0, -1);
   return path;
 }
-
-/** Guess the screen file a route maps to (used only for error messages):
- *   "/"            -> "screens/index.tsx"
- *   "/preferences" -> "screens/preferences.tsx"
- *   "/order/edit"  -> "screens/order/edit.tsx"
- */
-export function routeToFilePath(route: string): string {
-  const path = normalizeRoute(route);
-  if (path === "/") return "screens/index.tsx";
-  return `screens${path}.tsx`;
-}

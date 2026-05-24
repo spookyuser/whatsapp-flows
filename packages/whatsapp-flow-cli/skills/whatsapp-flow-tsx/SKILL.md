@@ -40,10 +40,10 @@ phone-number ids (see [Handoff](#handoff-lower-level-lifecycle)).
 ## A flow is a file
 
 Each flow is one `.tsx` file exporting its config (`flow`) plus one PascalCase
-function per screen. The **first screen export** (or one named `Index`/`Start`, or
-`flow.start`) is the start screen at route `/`; others route to
-`/<kebab-of-export-name>`. Link screens by route; the compiler infers the
-`routing_model` from your `<Next>` / `<Exchange>` links.
+function per screen. The export **must** be named `Index` — that's the start
+screen at `/`. Other exports route to `/<kebab-of-export-name>`. Link screens by
+route; the compiler infers the `routing_model` from your `<Next>` / `<Exchange>`
+links.
 
 `flows/flows.config.ts` — the project config ("next.config.ts" of flows):
 
@@ -68,10 +68,10 @@ import { defineFlow, Screen, Form, TextArea, TextBody, Footer, Next, Complete, f
 export const flow = defineFlow({
   // name defaults to namePrefix + filename ("acme_grocery"); override here.
   categories: ["LEAD_GENERATION"],
-  // version, categories, strict inherit the app; dataApiVersion, endpointUri, start are per-flow
+  // version + categories inherit the app; dataApiVersion + endpointUri are per-flow.
 });
 
-export function Index() {                  // first export → start "/" → screen id START
+export function Index() {                  // required: start screen at "/" → id START
   return (
     <Screen title="Start your order">
       <Form>
@@ -208,9 +208,8 @@ Every `check`/`build`/`push` runs two layers and **fails the compile** on any er
    wrong value types.
 
 Read the error, fix the screen, re-run `check`. Errors name the offending flow and
-screen. By default warnings (dead-end screens, terminal screens without `<Complete>`)
-are also errors; set `strict: false` in `flows.config.ts` (or a flow's `flow` config)
-to downgrade them to console warnings.
+screen. The compiler is always strict: dead-end screens and terminal screens
+without `<Complete>` are errors, not warnings.
 
 ## Handoff: lower-level lifecycle
 
@@ -226,8 +225,8 @@ the **`whatsapp-template-tsx`** skill.
 
 - **Author in TSX, not raw JSON.** If you're tempted to hand-edit compiled JSON,
   change the `.tsx` and recompile instead — the JSON is a build artifact.
-- **One flow per file.** Screens are PascalCase function exports; the first (or
-  `Index`/`Start`, or `flow.start`) is the start at `/`. Other exports route to
+- **One flow per file.** Screens are PascalCase function exports; the `Index`
+  export is required and is the start at `/`. Other exports route to
   `/<kebab-name>`; link them with `<Next to="/that-route">`.
 - **One action per `Footer`.** `Footer` takes exactly one of `<Next>`, `<Complete>`,
   `<Exchange>`, `<OpenURL>`, `<UpdateData>` as its child. Inputs that act on

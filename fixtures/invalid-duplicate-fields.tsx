@@ -1,6 +1,8 @@
-import { Screen, Form, TextInput, Footer, Complete } from "whatsapp-flow-tsx";
+import { Complete, Footer, Form, Screen, TextInput, defineFlow } from "whatsapp-flow-tsx";
 
-export default function Page() {
+export const flow = defineFlow({ name: "invalid_duplicate_fields" });
+
+export function Index() {
   return (
     <Screen title="Duplicate fields">
       <Form name="form">

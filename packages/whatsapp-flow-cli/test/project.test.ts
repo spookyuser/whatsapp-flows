@@ -41,7 +41,7 @@ describe("single-file flows", () => {
 describe("project loader", () => {
   it("detects a flows app and discovers its flow files", async () => {
     expect(isProjectDir(at("fixtures/app"))).toBe(true);
-    expect(isProjectDir(at("fixtures/basic-lead-form"))).toBe(false);
+    expect(isProjectDir(at("fixtures"))).toBe(false);
 
     const project = await loadProject(at("fixtures/app"));
     expect(project.app.namePrefix).toBe("test_");

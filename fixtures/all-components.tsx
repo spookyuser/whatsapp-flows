@@ -1,39 +1,54 @@
 import {
-  Screen,
-  Form,
-  TextHeading,
-  TextSubheading,
-  TextBody,
-  TextCaption,
-  RichText,
-  Image,
-  ImageCarousel,
+  CalendarPicker,
   CarouselImage,
-  EmbeddedLink,
-  TextInput,
-  TextArea,
-  Dropdown,
-  Option,
-  RadioButtonsGroup,
+  Case,
   CheckboxGroup,
   ChipsSelector,
-  OptIn,
+  Complete,
   DatePicker,
-  CalendarPicker,
-  If,
+  DocumentPicker,
+  Dropdown,
   Else,
-  Switch,
-  Case,
+  EmbeddedLink,
+  Exchange,
   Footer,
+  Form,
+  If,
+  Image,
+  ImageCarousel,
+  NavItem,
+  NavigationList,
   Next,
   OpenURL,
+  OptIn,
+  Option,
+  PhotoPicker,
+  RadioButtonsGroup,
+  RichText,
+  Screen,
+  Switch,
+  TextArea,
+  TextBody,
+  TextCaption,
+  TextHeading,
+  TextInput,
+  TextSubheading,
   UpdateData,
+  defineFlow,
   field,
 } from "whatsapp-flow-tsx";
 
-const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+export const flow = defineFlow({
+  name: "all_components",
+  version: "7.3",
+  dataApiVersion: "3.0",
+  endpointUri: "https://example.com/flow",
+});
 
-export default function Page() {
+const PNG =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+export function Index() {
   return (
     <Screen title="Everything">
       <TextHeading>Heading</TextHeading>
@@ -110,6 +125,64 @@ export default function Page() {
           <Next to="/upload" data={{ full_name: field("full_name") }}>
             Continue
           </Next>
+        </Footer>
+      </Form>
+    </Screen>
+  );
+}
+
+export function Upload() {
+  return (
+    <Screen title="Upload" data={{ full_name: { type: "string", __example__: "Sam" } }}>
+      <Form name="form">
+        <PhotoPicker
+          name="photos"
+          label="Upload photos"
+          photoSource="camera_gallery"
+          minUploadedPhotos={1}
+          maxUploadedPhotos={5}
+          maxFileSizeKb={10240}
+        />
+        <DocumentPicker
+          name="docs"
+          label="Upload documents"
+          allowedMimeTypes={["application/pdf"]}
+          maxFileSizeKb={5120}
+        />
+        <Footer>
+          <Exchange action="processUploads" next="/menu" data={{ photos: field("photos") }}>
+            Upload
+          </Exchange>
+        </Footer>
+      </Form>
+    </Screen>
+  );
+}
+
+export function Menu() {
+  return (
+    <Screen title="Choose">
+      <TextHeading>Pick an option</TextHeading>
+      <NavigationList
+        name="menu"
+        label="Options"
+        mediaSize="large"
+        onClickAction={<Next to="/done" />}
+      >
+        <NavItem id="a" title="Option A" description="First" metadata="meta" tags={["new"]} />
+        <NavItem id="b" title="Option B" description="Second" />
+      </NavigationList>
+    </Screen>
+  );
+}
+
+export function Done() {
+  return (
+    <Screen title="All done">
+      <Form name="form">
+        <TextBody>Thanks! Your submission is complete.</TextBody>
+        <Footer>
+          <Complete>Finish</Complete>
         </Footer>
       </Form>
     </Screen>

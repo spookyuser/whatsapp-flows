@@ -1,5 +1,5 @@
 // Single source of truth for "leaf" Flow components (everything except the
-// structural Form / Footer / Layout / Screen / If / Switch / NavigationList).
+// structural Form / Footer / Screen / If / Switch / NavigationList).
 // Both the normalizer (normalize.ts) and the JSON Schema generator
 // (json-schema.ts) are driven by this registry so they cannot drift.
 

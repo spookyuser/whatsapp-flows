@@ -54,9 +54,8 @@ const meta: ScreenMeta[] = [
 const clone = (): FlowJson => JSON.parse(JSON.stringify(good));
 
 describe("validateFlow", () => {
-  it("passes a valid flow without warnings", () => {
-    const result = validateFlow(good, { screens: meta, start: "START" });
-    expect(result.warnings).toEqual([]);
+  it("passes a valid flow without throwing", () => {
+    expect(() => validateFlow(good, { screens: meta, start: "START" })).not.toThrow();
   });
 
   it("flags a transition to a missing screen", () => {
@@ -87,11 +86,11 @@ describe("validateFlow", () => {
     expect(() => validateFlow(bad as unknown as FlowJson)).toThrow();
   });
 
-  it("promotes warnings to errors in strict mode", () => {
+  it("treats dead-end screens as errors (strict by default)", () => {
     const lonely: ScreenMeta[] = [
       { id: "START", route: "/", terminal: false, completes: false, edgeCount: 0 },
       { id: "DONE", route: "/done", terminal: true, completes: true, edgeCount: 0 },
     ];
-    expect(() => validateFlow(good, { screens: lonely, strict: true })).toThrow(/dead end/);
+    expect(() => validateFlow(good, { screens: lonely })).toThrow(/dead end/);
   });
 });

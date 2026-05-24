@@ -1,5 +1,4 @@
 import { FlowCompileError } from "whatsapp-flow-core";
-import type { FlowsAppConfig } from "whatsapp-flow-tsx";
 
 // Mirrors the proven Graph API interaction in the whatsapp-flow-crud skill.
 const GRAPH_VERSION = process.env.META_GRAPH_VERSION || "v23.0";
@@ -11,14 +10,13 @@ export interface MetaFlow {
   status?: string;
 }
 
-/** Resolve the Graph API access token from the configured env var. */
-export function getToken(app: FlowsAppConfig): string {
-  const envName = app.tokenEnv ?? "WHATSAPP_ACCESS_TOKEN";
-  const token = process.env[envName]?.trim();
+/** Resolve the Graph API access token from WHATSAPP_ACCESS_TOKEN. */
+export function getToken(): string {
+  const token = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
   if (!token) {
     throw new FlowCompileError(
-      `${envName} is not set. Export it, or run via your env loader, e.g.\n` +
-        `  dotenvx run -f .env.local -- pnpm flows push`,
+      "WHATSAPP_ACCESS_TOKEN is not set. Export it, or run via your env loader, e.g.\n" +
+        "  dotenvx run -f .env.local -- pnpm flows push",
     );
   }
   return token;

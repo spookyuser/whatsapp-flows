@@ -1,90 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compileFlow (end-to-end) > compiles the basic lead form 1`] = `
-{
-  "routing_model": {
-    "START": [
-      "THANKS",
-    ],
-    "THANKS": [],
-  },
-  "screens": [
-    {
-      "id": "START",
-      "layout": {
-        "children": [
-          {
-            "children": [
-              {
-                "label": "Your name",
-                "name": "full_name",
-                "required": true,
-                "type": "TextInput",
-              },
-              {
-                "input-type": "email",
-                "label": "Email",
-                "name": "email",
-                "required": true,
-                "type": "TextInput",
-              },
-              {
-                "label": "Submit",
-                "on-click-action": {
-                  "name": "navigate",
-                  "next": {
-                    "name": "THANKS",
-                    "type": "screen",
-                  },
-                  "payload": {
-                    "email": "\${form.email}",
-                    "full_name": "\${form.full_name}",
-                  },
-                },
-                "type": "Footer",
-              },
-            ],
-            "name": "form",
-            "type": "Form",
-          },
-        ],
-        "type": "SingleColumnLayout",
-      },
-      "title": "Get in touch",
-    },
-    {
-      "id": "THANKS",
-      "layout": {
-        "children": [
-          {
-            "children": [
-              {
-                "text": "Thanks! We'll be in touch shortly.",
-                "type": "TextBody",
-              },
-              {
-                "label": "Done",
-                "on-click-action": {
-                  "name": "complete",
-                },
-                "type": "Footer",
-              },
-            ],
-            "name": "form",
-            "type": "Form",
-          },
-        ],
-        "type": "SingleColumnLayout",
-      },
-      "terminal": true,
-      "title": "Thank you",
-    },
-  ],
-  "version": "7.2",
-}
-`;
-
-exports[`compileFlow (end-to-end) > compiles the grocery example with the expected routing model 1`] = `
+exports[`compileFlowFile (end-to-end) > compiles the grocery example with the expected routing model 1`] = `
 {
   "routing_model": {
     "CONFIRM": [],
@@ -233,11 +149,11 @@ exports[`compileFlow (end-to-end) > compiles the grocery example with the expect
       "title": "Confirm your order",
     },
   ],
-  "version": "7.2",
+  "version": "7.3",
 }
 `;
 
-exports[`compileFlow (end-to-end) > emits data_api_version and folds the action into a data_exchange payload 1`] = `
+exports[`compileFlowFile (end-to-end) > emits data_api_version and folds the action into a data_exchange payload 1`] = `
 {
   "data_api_version": "3.0",
   "routing_model": {

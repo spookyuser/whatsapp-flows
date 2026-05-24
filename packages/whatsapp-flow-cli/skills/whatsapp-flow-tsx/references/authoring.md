@@ -23,16 +23,17 @@ and are normalized to Meta's kebab-case keys at compile time (`scaleType` →
 ## Mental model
 
 - One flow per `.tsx` file: `export const flow = defineFlow({…})` plus one PascalCase
-  function export per screen, each returning exactly one `<Screen>`. The first export
-  (or `Index`/`Start`, or `flow.start`) is the start screen at `/`.
+  function export per screen, each returning exactly one `<Screen>`. The export
+  named `Index` is required and is the start screen at `/`.
 - A `<Screen>` usually contains a single `<Form name="form">` wrapping inputs and a
   `<Footer>`. Display-only components (text, image) can sit directly in the screen.
 - A `<Footer>` holds **exactly one** action (`<Next>`, `<Complete>`, `<Exchange>`,
   `<OpenURL>`, `<UpdateData>`).
 - Navigation is by **route** (`to="/confirm"`); a screen export named `Confirm`
   routes to `/confirm`. The compiler builds the routing model from your links.
-- Text can be passed as the `text` prop *or* as JSX children — `<TextBody>Hi</TextBody>`
-  equals `<TextBody text="Hi" />`. `Option`/`NavItem` titles work the same way.
+- Text display components accept their text as either the `text` prop *or* as JSX
+  children — `<TextBody>Hi</TextBody>` equals `<TextBody text="Hi" />`. Structural
+  items (`<Option>`, `<NavItem>`) take `title` as a required prop.
 
 ## Reference helpers (dynamic values)
 
@@ -78,8 +79,8 @@ Action-valued props take an action **element** directly (note the JSX, not a fun
 ```tsx
 <Dropdown name="size" label="Size"
   onSelectAction={<UpdateData data={{ chosen: field("size") }} />}>
-  <Option id="s">Small</Option>
-  <Option id="m">Medium</Option>
+  <Option id="s" title="Small" />
+  <Option id="m" title="Medium" />
 </Dropdown>
 <OptIn name="tos" label="I agree" onClickAction={<OpenURL url="https://example.com/terms" />} />
 <EmbeddedLink onClickAction={<OpenURL url="https://example.com/info" />}>Learn more</EmbeddedLink>
@@ -89,8 +90,7 @@ Action-valued props take an action **element** directly (note the JSX, not a fun
 
 | Component | Key props | Notes |
 | --- | --- | --- |
-| `Screen` | `title?`, `terminal?`, `success?`, `data?` | One per export. `data` is the screen's input schema (see [Multi-screen](#multi-screen-data-flow)). `terminal` is usually inferred from `<Complete>`. |
-| `SingleColumnLayout` / `Layout` | — | Optional explicit layout wrapper; usually unnecessary (the compiler wraps screen children). |
+| `Screen` | `title?`, `terminal?`, `success?`, `data?` | One per export. `data` is the screen's input schema (see [Multi-screen](#multi-screen-data-flow)). `terminal` is usually inferred from `<Complete>`. The screen's layout (Meta's `SingleColumnLayout`) is implicit — write children directly. |
 | `Form` | `name?` (default `"form"`) | Wraps all inputs on a screen. Field `name`s must be unique within it. |
 | `Footer` | `label?`, `leftCaption?`, `centerCaption?`, `rightCaption?`, `enabled?` | Holds exactly one action child. |
 
@@ -145,8 +145,8 @@ Compose options/items as child elements.
 
 ```tsx
 <RadioButtonsGroup name="color" label="Color">
-  <Option id="red">Red</Option>            {/* title via children */}
-  <Option id="blue" title="Blue" />        {/* or via prop */}
+  <Option id="red" title="Red" />
+  <Option id="blue" title="Blue" />
 </RadioButtonsGroup>
 
 <CheckboxGroup name="toppings" label="Toppings" minSelectedItems={1} maxSelectedItems={3}>
@@ -155,7 +155,7 @@ Compose options/items as child elements.
 </CheckboxGroup>
 ```
 
-`<Option>` props: `id`, `title?`/children, `description?`, `metadata?`, `enabled?`,
+`<Option>` props: `id?`, `title` (required), `description?`, `metadata?`, `enabled?`,
 `image?` (path or URL, auto-encoded), `altText?`.
 
 `<NavigationList>` takes `<NavItem>` children and an optional default
@@ -168,7 +168,7 @@ Compose options/items as child elements.
 </NavigationList>
 ```
 
-`<NavItem>` props: `id`, `title?`/children, `description?`, `metadata?`, `image?`
+`<NavItem>` props: `id?`, `title` (required), `description?`, `metadata?`, `image?`
 (path or URL, auto-encoded), `badge?`, `tags?: string[]`, `onClickAction?`.
 
 ## Conditionals: If / Switch
@@ -290,6 +290,6 @@ raise — don't try to force it in TSX.
 | `Footer` must contain exactly one action | Put a single `<Next>`/`<Complete>`/… in the `Footer`. |
 | Input outside a `Form` | Wrap inputs in `<Form>`. |
 | Unsupported component / unknown prop / bad enum | Use a component/prop/value from this reference. |
-| Terminal screen without `<Complete>` / dead-end screen (warning) | Add a `<Complete>`, or set `strict: false` to allow it as a warning. |
+| Terminal screen without `<Complete>` / dead-end screen | Add a `<Complete>`, or wire an outgoing `<Next>` / `<Exchange>`. |
 
 Re-run `check` after each fix until it reports `✓ N screen(s) valid`.

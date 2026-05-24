@@ -1,10 +1,21 @@
-import { Screen, Form, Image, ImageCarousel, CarouselImage, Footer, Complete } from "whatsapp-flow-tsx";
+import {
+  CarouselImage,
+  Complete,
+  Footer,
+  Form,
+  Image,
+  ImageCarousel,
+  Screen,
+  defineFlow,
+} from "whatsapp-flow-tsx";
 
-export default function Page() {
+export const flow = defineFlow({ name: "local_image", version: "7.2" });
+
+export function Index() {
   return (
     <Screen title="Pic">
       <Form name="form">
-        {/* relative path → resolved against this screen file's directory */}
+        {/* relative path → resolved against this flow file's directory */}
         <Image src="dot.png" altText="dot" />
         <ImageCarousel scaleType="cover">
           <CarouselImage src="./dot.png" altText="one" />

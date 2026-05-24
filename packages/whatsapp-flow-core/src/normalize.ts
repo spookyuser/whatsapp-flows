@@ -1,6 +1,5 @@
 import { FlowCompileError } from "./errors.ts";
 import { isAuthoringNode, textOf } from "./node.ts";
-import { routeToFilePath } from "./route-id.ts";
 import { isEnumKind, LEAF_SPEC_BY_TYPE, type LeafSpec, type PropKind } from "./specs.ts";
 import {
   type AuthoringNode,
@@ -74,26 +73,7 @@ export function normalizeScreen(root: unknown, opts: NormalizeScreenOptions): No
 }
 
 function buildLayout(screen: AuthoringNode, build: Build): FlowLayout {
-  const meaningful = screen.children.filter((c) => c.component !== TEXT_NODE);
-  let layoutChildren: AuthoringNode[];
-  if (
-    meaningful.length === 1 &&
-    meaningful[0] !== undefined &&
-    (meaningful[0].component === "SingleColumnLayout" || meaningful[0].component === "Layout")
-  ) {
-    layoutChildren = meaningful[0].children.filter((c) => c.component !== TEXT_NODE);
-  } else {
-    for (const c of meaningful) {
-      if (c.component === "SingleColumnLayout" || c.component === "Layout") {
-        throw new FlowCompileError(
-          `Screen "${build.route}" mixes a <Layout> with other top-level elements. Put all content inside a single <Layout> or none.`,
-          { route: build.route },
-        );
-      }
-    }
-    layoutChildren = meaningful;
-  }
-
+  const layoutChildren = screen.children.filter((c) => c.component !== TEXT_NODE);
   return {
     type: "SingleColumnLayout",
     children: layoutChildren.map((c) => normalizeComponent(c, build, false)),
@@ -132,12 +112,6 @@ function normalizeComponent(n: AuthoringNode, build: Build, insideForm: boolean)
       return normalizeSwitch(n, build, insideForm);
     case "NavigationList":
       return normalizeNavigationList(n, build);
-    case "SingleColumnLayout":
-    case "Layout":
-      throw new FlowCompileError(`Nested <Layout> is not supported on screen "${build.route}".`, {
-        route: build.route,
-        component: c,
-      });
     default:
       throw new FlowCompileError(
         `<${c}> is not a supported Flow component on screen "${build.route}".`,
@@ -179,21 +153,11 @@ function normalizeLeaf(n: AuthoringNode, spec: LeafSpec, build: Build): FlowComp
   return out as unknown as FlowComponent;
 }
 
-/** Gather a component's child elements of a given type into plain item objects,
- * letting each item's `title` fall back to its text children. Feeds the
- * `dataSource` / `imageList` coercions, so `<Option>`/`<CarouselImage>` children
- * compose into the `data-source` / `images` arrays. */
+/** Gather a component's child elements of a given type into plain item objects.
+ * Feeds the `dataSource` / `imageList` coercions, so `<Option>`/`<CarouselImage>`
+ * children compose into the `data-source` / `images` arrays. */
 function collectChildItems(n: AuthoringNode, childComponent: string): Record<string, unknown>[] {
-  return n.children.filter((c) => c.component === childComponent).map((c) => itemObject(c));
-}
-
-function itemObject(c: AuthoringNode): Record<string, unknown> {
-  const obj: Record<string, unknown> = { ...c.props };
-  if (obj.title === undefined) {
-    const text = textOf(c);
-    if (text.length > 0) obj.title = text;
-  }
-  return obj;
+  return n.children.filter((c) => c.component === childComponent).map((c) => ({ ...c.props }));
 }
 
 function coerce(
@@ -346,7 +310,7 @@ function resolveOrThrow(route: string, component: string, build: Build): string 
   if (id === null) {
     const verb = component === "Exchange" ? "next" : "to";
     throw new FlowCompileError(
-      `Screen "${build.route}" has a <${component} ${verb}="${route}">, but no screen exists at "${routeToFilePath(route)}".`,
+      `Screen "${build.route}" has a <${component} ${verb}="${route}">, but no screen exports that route.`,
       { route: build.route, component },
     );
   }
@@ -456,7 +420,7 @@ function normalizeNavigationList(n: AuthoringNode, build: Build): FlowComponent 
   const out: Record<string, unknown> = {
     type: "NavigationList",
     name,
-    "list-items": itemNodes.map((c, i) => normalizeNavItem(itemObject(c), i, build)),
+    "list-items": itemNodes.map((c, i) => normalizeNavItem({ ...c.props }, i, build)),
   };
   put(out, "label", n.props.label);
   put(out, "description", n.props.description);

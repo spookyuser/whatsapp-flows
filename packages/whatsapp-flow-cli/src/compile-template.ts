@@ -14,7 +14,6 @@ export interface CompiledTemplate {
   components: TemplateComponent[];
   /** Full create payload (name, language, category, allow_category_change, components). */
   payload: Record<string, unknown>;
-  warnings: string[];
   /** Absolute path to the source .tsx file. */
   file: string;
 }
@@ -81,7 +80,7 @@ export async function compileTemplateFile(
     components,
   };
 
-  return { name, language, category, allowCategoryChange, components, payload, warnings: [], file };
+  return { name, language, category, allowCategoryChange, components, payload, file };
 }
 
 // --- structure -------------------------------------------------------------

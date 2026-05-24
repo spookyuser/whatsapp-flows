@@ -27,8 +27,8 @@ screen as a typed component, infers the routing model from your `<Next>` /
 
 ## A flows app
 
-The primary model is a **flows app**: a directory with a `flows.config.ts` and one
-`.tsx` file per flow. A single `whatsapp-flow push` compiles and syncs them all.
+A flows app is a directory with a `flows.config.ts` and one `.tsx` file per flow
+(or per message template). A single `whatsapp-flow push` compiles and syncs them all.
 
 ```
 flows/
@@ -49,16 +49,15 @@ export default defineFlowsApp({
   categories: ["SIGN_IN"],   // default categories
   wabas: { prod: { id: "…" }, dev: { id: "…" } },
   defaultWaba: "dev",        // which WABA `push` targets by default
-  // tokenEnv: "WHATSAPP_ACCESS_TOKEN" (default), strict …
 });
 ```
 
 ### A flow is a file
 
 Each `.tsx` exports its config as `flow` plus one **PascalCase function per screen**.
-The first screen export (or one named `Index`/`Start`, or `flow.start`) is the start
-screen at route `/`; every other export routes to `/<kebab-of-export-name>`. Link
-screens by route; the compiler infers the `routing_model` from your links.
+The export **must** be named `Index` — that's the start screen at route `/`. Every
+other export routes to `/<kebab-of-export-name>`. Link screens by route; the
+compiler infers the `routing_model` from your links.
 
 ```tsx
 // flows/grocery.tsx
@@ -67,10 +66,10 @@ import { defineFlow, Screen, Form, TextArea, TextBody, Footer, Next, Complete, f
 export const flow = defineFlow({
   // name defaults to namePrefix + filename ("acme_grocery"); override here.
   categories: ["LEAD_GENERATION"],
-  // version, categories, strict inherit the app; dataApiVersion, endpointUri, start are per-flow
+  // version + categories inherit the app; dataApiVersion + endpointUri are per-flow.
 });
 
-export function Index() {                    // first export → start "/" → screen id START
+export function Index() {                    // required: start screen at "/" → id START
   return (
     <Screen title="Start your order">
       <Form>
@@ -95,13 +94,8 @@ export function Confirm() {                   // "/confirm" → screen id CONFIR
 }
 ```
 
-### Single flow (folder model)
-
-A standalone flow is also supported: a folder with a `flow.config.ts` and a
-`screens/` directory, where each `screens/*.tsx` default-exports one screen and the
-file name is the route (`index.tsx` → `/`). `whatsapp-flow build flows/grocery`
-compiles just that folder. See [`examples/grocery-order`](examples/grocery-order) for
-a complete folder-model flow and its compiled `flow.json`.
+See [`examples/grocery-order`](examples/grocery-order) for a complete flows-app
+example.
 
 To make the JSX type-check in your editor, point TypeScript at the custom runtime:
 
@@ -176,8 +170,9 @@ and a non-empty example for every variable.
 
 ## CLI
 
+Run from the app root; commands act on every flow and template.
+
 ```bash
-# Flows app (run from the app root; no path needed — acts on every flow + template)
 whatsapp-flow check                  # validate every flow and template
 whatsapp-flow inspect                # outline each flow (routes/ids) and template (text/vars)
 whatsapp-flow build                  # compile all → flows/.build/ (<name>.json, <name>.template.json)
@@ -186,19 +181,11 @@ whatsapp-flow push                   # sync drafts to Meta
 whatsapp-flow push --publish         # sync + publish (goes live)
 whatsapp-flow push --waba both       # target every configured WABA (default: defaultWaba)
 
-# Single flow (folder model)
-whatsapp-flow build   flows/grocery                 # compile and write flow.json
-whatsapp-flow build   flows/grocery --out out.json  # …to a custom path
-whatsapp-flow check   flows/grocery                 # validate, write nothing
-whatsapp-flow inspect flows/grocery                 # routes, ids, transitions, screen outline
-
 whatsapp-flow schema  --out flow.schema.json        # emit the JSON Schema used for verification
 ```
 
-`build`/`check`/`inspect` auto-detect: given a directory with `flows.config.ts` (or
-run with no path in one) they act on the whole app; given a flow folder they act on
-that one flow. `inspect` is a lightweight text preview (route map + transitions +
-per-screen outline) — **not** a faithful render of WhatsApp's UI.
+`inspect` is a lightweight text preview (route map + transitions + per-screen
+outline) — **not** a faithful render of WhatsApp's UI.
 
 ## Push & deploy
 
@@ -220,10 +207,9 @@ to Meta for review; a changed template is **edited** in place; an unchanged one 
 review rather than a publish call — and the lockfile records each template's last
 known review status (e.g. `PENDING`). Template keys are scoped `tpl:<name>@<language>`.
 
-`push` needs a Meta access token in the environment — `WHATSAPP_ACCESS_TOKEN` by
-default, or the env var named by `tokenEnv` in `flows.config.ts`. Load it however you
-like, e.g. `dotenvx run -f .env.local -- whatsapp-flow push`. Start with
-`push --dry-run` to preview the plan.
+`push` needs `WHATSAPP_ACCESS_TOKEN` in the environment. Load it however you like,
+e.g. `dotenvx run -f .env.local -- whatsapp-flow push`. Start with `push --dry-run`
+to preview the plan.
 
 Configuring a flow's `endpoint_uri` (for data-exchange flows) is **not** done by
 `push`; set it via the Graph API / Flow Builder separately.
@@ -264,9 +250,11 @@ Don't hand-write Meta reference strings. Use:
 
 ## Components
 
-Every component in Meta's current Flow JSON catalog is supported:
+Every component in Meta's current Flow JSON catalog is supported. The screen
+layout (Meta's `SingleColumnLayout`) is implicit — write `<Screen><Form>…</Form></Screen>`
+directly.
 
-- **Structure:** `Screen`, `SingleColumnLayout`/`Layout`, `Form`, `Footer`, `If`, `Switch`
+- **Structure:** `Screen`, `Form`, `Footer`, `If`, `Switch`
 - **Text / display:** `TextHeading`, `TextSubheading`, `TextBody`, `TextCaption`, `RichText`, `Image`, `ImageCarousel`, `EmbeddedLink`
 - **Inputs:** `TextInput`, `TextArea`, `Dropdown`, `RadioButtonsGroup`, `CheckboxGroup`, `ChipsSelector`, `OptIn`, `DatePicker`, `CalendarPicker`, `PhotoPicker`, `DocumentPicker`
 - **Navigation:** `NavigationList`
@@ -293,13 +281,12 @@ A `Footer` takes one action as its child. Components with action properties
 Choices and lists are composed from child elements rather than array props.
 `Dropdown` / `RadioButtonsGroup` / `CheckboxGroup` / `ChipsSelector` take `<Option>`
 children, `NavigationList` takes `<NavItem>` children, and `ImageCarousel` takes
-`<CarouselImage>` children. An `<Option>`/`<NavItem>` title may be written as text
-children instead of a `title` prop:
+`<CarouselImage>` children. `<Option>` and `<NavItem>` require a `title` prop.
 
 ```tsx
 <RadioButtonsGroup name="color" label="Color">
-  <Option id="red">Red</Option>
-  <Option id="blue">Blue</Option>
+  <Option id="red" title="Red" />
+  <Option id="blue" title="Blue" />
 </RadioButtonsGroup>
 
 <NavigationList name="menu" onClickAction={<Next to="/done" />}>
@@ -325,8 +312,8 @@ false branch. `Switch` composes `<Case value="…">` children and an optional
 </Switch>
 ```
 
-The `fixtures/all-components` flow exercises every component, and a test asserts the
-compiled output contains all of them.
+The `fixtures/all-components.tsx` flow exercises every component, and a test
+asserts the compiled output contains all of them.
 
 ## Routing
 
@@ -342,13 +329,14 @@ route-scoped error naming the offending screen and the missing route.
 
 ## Validation & formal verification
 
-Two layers run on every build:
+Two layers run on every build and **fail the compile** on any issue:
 
 1. **Semantic checks** (developer-readable, route-scoped errors): route existence,
    unique screen ids, unique field names per form (recursing through `If`/`Switch`),
-   exactly one action per `Footer`, terminal/complete consistency, inputs inside a
-   `Form`, no unsupported components, no unserializable values, and a clean
-   `JSON.stringify`/`parse` round-trip.
+   exactly one action per `Footer`, terminal/complete consistency, dead-end screens,
+   terminal screens without `<Complete>`, inputs inside a `Form`, no unsupported
+   components, no unserializable values, and a clean `JSON.stringify`/`parse`
+   round-trip.
 2. **Formal verification:** the compiled JSON is validated against a generated
    **JSON Schema** (`buildFlowJsonSchema()`) using **Ajv** — a validation engine
    independent of the builder. The schema and the normalizer are both generated from
@@ -356,10 +344,6 @@ Two layers run on every build:
    portable artifact you can reuse (`whatsapp-flow schema`). It rejects unknown
    component/action types, stray keys (e.g. JSX artifacts), bad enum values, missing
    required properties, and wrong value types.
-
-Set `strict: false` in `flows.config.ts` (or a flow's `flow` config) to downgrade
-warnings (dead-end screens, terminal screens without `<Complete>`) from errors to
-console warnings.
 
 ## Develop
 
@@ -370,9 +354,8 @@ pnpm -r typecheck   # tsc --noEmit per package
 pnpm test           # vitest (unit + compiler e2e + snapshots)
 ```
 
-`fixtures/app` is a single-file flows-app fixture; `fixtures/mixed-app` mixes a flow
-with message templates; `examples/grocery-order` is a complete folder-model flow with
-its compiled `flow.json`.
+`fixtures/app` is a flows-app fixture; `fixtures/mixed-app` mixes a flow with
+message templates; `examples/grocery-order` is a complete flows-app example.
 
 ## Status & scope
 

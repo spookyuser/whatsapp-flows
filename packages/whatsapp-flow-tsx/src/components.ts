@@ -23,12 +23,6 @@ export function Screen(props: ScreenProps): AuthoringNode {
   return el("Screen", props);
 }
 
-export type LayoutProps = WithChildren;
-export function SingleColumnLayout(props: LayoutProps): AuthoringNode {
-  return el("SingleColumnLayout", props);
-}
-export const Layout = SingleColumnLayout;
-
 export interface FormProps extends WithChildren {
   name?: string;
 }
@@ -206,10 +200,9 @@ export function TextArea(props: TextAreaProps): AuthoringNode {
   return el("TextArea", props);
 }
 
-export interface OptionProps extends WithChildren {
+export interface OptionProps {
+  title: string;
   id?: string;
-  /** Visible label. May be supplied as text children instead. */
-  title?: string;
   description?: string;
   metadata?: string;
   enabled?: boolean;
@@ -388,10 +381,9 @@ export function NavigationList(props: NavigationListProps): AuthoringNode {
   return el("NavigationList", props);
 }
 
-export interface NavItemProps extends WithChildren {
+export interface NavItemProps {
+  title: string;
   id?: string;
-  /** Item title. May be supplied as text children instead. */
-  title?: string;
   description?: string;
   metadata?: string;
   image?: string;

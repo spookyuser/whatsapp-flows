@@ -3,7 +3,7 @@ import { defineFlow, Screen, Form, TextInput, Footer, Complete, field } from "wh
 // Name override beats the project namePrefix. Single screen → START.
 export const flow = defineFlow({ name: "custom_login", categories: ["SIGN_IN"] });
 
-export function Login() {
+export function Index() {
   return (
     <Screen title="Login" success>
       <Form>

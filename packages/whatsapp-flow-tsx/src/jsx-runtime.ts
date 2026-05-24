@@ -1,9 +1,4 @@
-import {
-  type AuthoringChild,
-  type AuthoringNode,
-  FRAGMENT_NODE,
-  node,
-} from "whatsapp-flow-core";
+import { type AuthoringChild, type AuthoringNode, FRAGMENT_NODE, node } from "whatsapp-flow-core";
 
 /** Fragment marker, so `<>...</>` groups children without a wrapper element. */
 export const Fragment = FRAGMENT_NODE;

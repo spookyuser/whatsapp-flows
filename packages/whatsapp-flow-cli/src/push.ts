@@ -77,7 +77,9 @@ export async function buildProject(flowsDir: string, outDir?: string): Promise<v
   for (const f of flows) {
     const dest = path.join(out, `${f.name}.json`);
     await writeFile(dest, JSON.stringify(f.flow, null, 2) + "\n", "utf8");
-    console.log(`✓ ${f.name} → ${path.relative(process.cwd(), dest)} (${f.flow.screens.length} screen(s))`);
+    console.log(
+      `✓ ${f.name} → ${path.relative(process.cwd(), dest)} (${f.flow.screens.length} screen(s))`,
+    );
   }
   for (const t of templates) {
     const dest = path.join(out, `${t.name}.template.json`);
@@ -90,9 +92,13 @@ export async function buildProject(flowsDir: string, outDir?: string): Promise<v
 export async function inspectProject(flowsDir: string): Promise<void> {
   const { flows, templates } = await compileAll(flowsDir);
   for (const f of flows) {
-    console.log(`\n${f.name}  (v${f.flow.version}${f.categories ? `, ${f.categories.join("/")}` : ""})`);
+    console.log(
+      `\n${f.name}  (v${f.flow.version}${f.categories ? `, ${f.categories.join("/")}` : ""})`,
+    );
     for (const s of f.flow.screens) {
-      const flags = [s.terminal ? "terminal" : "", s.success ? "success" : ""].filter(Boolean).join(" ");
+      const flags = [s.terminal ? "terminal" : "", s.success ? "success" : ""]
+        .filter(Boolean)
+        .join(" ");
       console.log(`  ${s.id}  "${s.title ?? ""}"${flags ? `  [${flags}]` : ""}`);
     }
     const model = f.flow.routing_model ?? {};
@@ -128,7 +134,8 @@ function resolveTargets(app: FlowsAppConfig, wabaArg: string | undefined): Targe
     );
   }
   if (pick === "both") {
-    if (labels.length === 0) throw new FlowCompileError("--waba both needs `wabas` in flows.config.ts.");
+    if (labels.length === 0)
+      throw new FlowCompileError("--waba both needs `wabas` in flows.config.ts.");
     return labels.map((label) => ({ label, id: wabas[label]!.id }));
   }
   if (wabas[pick]) return [{ label: pick, id: wabas[pick]!.id }];
@@ -263,7 +270,13 @@ export async function pushProject(flowsDir: string, opts: PushOptions = {}): Pro
   printSummary(rows, opts);
 }
 
-const GLYPH: Record<Action, string> = { skip: "·", create: "+", update: "~", edit: "✎", publish: "↑" };
+const GLYPH: Record<Action, string> = {
+  skip: "·",
+  create: "+",
+  update: "~",
+  edit: "✎",
+  publish: "↑",
+};
 
 function printSummary(rows: Row[], opts: PushOptions): void {
   const prefix = opts.dryRun ? "(dry run) " : "";

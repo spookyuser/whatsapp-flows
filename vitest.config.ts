@@ -7,12 +7,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "whatsapp-flow-core": r("./packages/whatsapp-flow-core/src/index.ts"),
-      "whatsapp-flow-tsx/jsx-runtime": r(
-        "./packages/whatsapp-flow-tsx/src/jsx-runtime.ts",
-      ),
-      "whatsapp-flow-tsx/jsx-dev-runtime": r(
-        "./packages/whatsapp-flow-tsx/src/jsx-runtime.ts",
-      ),
+      "whatsapp-flow-tsx/jsx-runtime": r("./packages/whatsapp-flow-tsx/src/jsx-runtime.ts"),
+      "whatsapp-flow-tsx/jsx-dev-runtime": r("./packages/whatsapp-flow-tsx/src/jsx-runtime.ts"),
       "whatsapp-flow-tsx": r("./packages/whatsapp-flow-tsx/src/index.ts"),
     },
   },

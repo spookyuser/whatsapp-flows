@@ -1,9 +1,4 @@
-import {
-  isEnumKind,
-  LEAF_SPECS,
-  type LeafSpec,
-  type PropKind,
-} from "./specs.ts";
+import { isEnumKind, LEAF_SPECS, type LeafSpec, type PropKind } from "./specs.ts";
 
 type JsonSchema = Record<string, unknown>;
 
@@ -12,7 +7,12 @@ const boolOrDynamic: JsonSchema = { type: ["boolean", "string"] };
 
 function kindToSchema(kind: PropKind): JsonSchema {
   if (isEnumKind(kind)) {
-    return { anyOf: [{ type: "string", enum: kind.enum }, { type: "string", pattern: REF_PATTERN }] };
+    return {
+      anyOf: [
+        { type: "string", enum: kind.enum },
+        { type: "string", pattern: REF_PATTERN },
+      ],
+    };
   }
   switch (kind) {
     case "str":

@@ -80,13 +80,7 @@ export interface FlowComponent {
 // Authoring AST (produced by the TSX layer, consumed by normalize.ts)
 // ---------------------------------------------------------------------------
 
-export type AuthoringChild =
-  | AuthoringNode
-  | string
-  | number
-  | boolean
-  | null
-  | undefined;
+export type AuthoringChild = AuthoringNode | string | number | boolean | null | undefined;
 
 export interface AuthoringNode {
   readonly $kind: "flow-node";

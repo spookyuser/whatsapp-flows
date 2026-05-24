@@ -11,10 +11,7 @@ export interface AssembleOptions {
 /** Assemble normalized screens into a complete Flow JSON document, including the
  * routing_model derived from each screen's transitions. Screen order is
  * preserved; edges are sorted for deterministic, snapshot-stable output. */
-export function assembleFlow(
-  screens: NormalizedScreen[],
-  opts: AssembleOptions,
-): FlowJson {
+export function assembleFlow(screens: NormalizedScreen[], opts: AssembleOptions): FlowJson {
   const routing_model: Record<string, string[]> = {};
   for (const s of screens) {
     routing_model[s.screen.id] = [...new Set(s.edges)].sort();

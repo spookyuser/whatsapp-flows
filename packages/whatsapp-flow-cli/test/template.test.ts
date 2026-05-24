@@ -11,7 +11,7 @@ const root = path.resolve(here, "../../..");
 const at = (p: string): string => path.join(root, p);
 
 const app = { namePrefix: "acme_", language: "en_US" };
-type Comp = Record<string, any>;
+type Comp = Record<string, unknown>;
 const byType = (t: { components: Comp[] }, type: string): Comp =>
   t.components.find((c) => c.type === type)!;
 
@@ -103,7 +103,10 @@ describe("template validation", () => {
     expectReject("fixtures/template-errors/empty-example.tsx", /needs a non-empty example/i));
 
   it("rejects a URL variable that isn't at the end", () =>
-    expectReject("fixtures/template-errors/url-var-not-last.tsx", /must be at the end of the URL/i));
+    expectReject(
+      "fixtures/template-errors/url-var-not-last.tsx",
+      /must be at the end of the URL/i,
+    ));
 
   it("rejects a template without a body", () =>
     expectReject("fixtures/template-errors/no-body.tsx", /exactly one <Template\.Body>/i));

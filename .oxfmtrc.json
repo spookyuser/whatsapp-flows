@@ -1,0 +1,11 @@
+{
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/.turbo/**",
+    "**/.build/**",
+    "node_modules/**",
+    "coverage/**",
+    "fixtures/**",
+    "pnpm-lock.yaml"
+  ]
+}

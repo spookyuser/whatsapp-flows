@@ -57,11 +57,7 @@ async function encode(src: string, baseDir: string, route: string): Promise<stri
 /** Walk a rendered screen tree and replace image path/URL sources with base64,
  * in place. Relative paths resolve against `baseDir` (the screen file's
  * directory). Already-base64 strings and `${...}` references pass through. */
-export async function resolveImages(
-  root: unknown,
-  baseDir: string,
-  route: string,
-): Promise<void> {
+export async function resolveImages(root: unknown, baseDir: string, route: string): Promise<void> {
   if (!isAuthoringNode(root)) return;
 
   const jobs: Promise<void>[] = [];

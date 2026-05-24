@@ -134,7 +134,8 @@ export async function createTemplate(
     method: "POST",
     body: payload,
   })) as { id?: string; status?: string };
-  if (!data.id) throw new FlowCompileError(`Meta create template "${String(payload.name)}" returned no id.`);
+  if (!data.id)
+    throw new FlowCompileError(`Meta create template "${String(payload.name)}" returned no id.`);
   return { id: data.id, status: data.status };
 }
 

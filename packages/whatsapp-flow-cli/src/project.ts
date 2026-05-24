@@ -23,9 +23,7 @@ export function isProjectDir(dir: string): boolean {
 
 export async function loadProject(flowsDir: string): Promise<LoadedProject> {
   const dir = path.resolve(flowsDir);
-  const configPath = CONFIG_NAMES.map((f) => path.join(dir, f)).find((f) =>
-    existsSync(f),
-  );
+  const configPath = CONFIG_NAMES.map((f) => path.join(dir, f)).find((f) => existsSync(f));
   if (!configPath) {
     throw new FlowCompileError(
       `No flows.config.ts in "${flowsDir}". Create one with defineFlowsApp({ ... }).`,

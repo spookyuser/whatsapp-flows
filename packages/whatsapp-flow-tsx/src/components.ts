@@ -8,11 +8,7 @@ interface WithChildren {
 type Action = AuthoringNode;
 
 function el(component: string, props: object): AuthoringNode {
-  return node(
-    component,
-    props as Record<string, unknown>,
-    (props as WithChildren).children,
-  );
+  return node(component, props as Record<string, unknown>, (props as WithChildren).children);
 }
 
 // --- Structure -------------------------------------------------------------

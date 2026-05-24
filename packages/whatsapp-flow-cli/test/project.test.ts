@@ -46,9 +46,6 @@ describe("project loader", () => {
     const project = await loadProject(at("fixtures/app"));
     expect(project.app.namePrefix).toBe("test_");
     expect(project.app.defaultWaba).toBe("dev");
-    expect(project.flowFiles.map((f) => path.basename(f))).toEqual([
-      "login.tsx",
-      "signup.tsx",
-    ]);
+    expect(project.flowFiles.map((f) => path.basename(f))).toEqual(["login.tsx", "signup.tsx"]);
   });
 });

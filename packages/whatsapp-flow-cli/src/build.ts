@@ -41,8 +41,7 @@ export async function compileFlow(
 
   const routes = buildRoutes(files, screensDir);
   const idByRoute = new Map(routes.map((r) => [r.route, r.id]));
-  const resolveRoute = (to: string): string | null =>
-    idByRoute.get(normalizeRoute(to)) ?? null;
+  const resolveRoute = (to: string): string | null => idByRoute.get(normalizeRoute(to)) ?? null;
 
   const startId = routeToScreenId(config.start);
   if (!routes.some((r) => r.id === startId)) {
@@ -76,9 +75,7 @@ export async function compileFlow(
     // are file paths or URLs into base64, resolving relative paths against the
     // screen file's directory.
     await resolveImages(root, path.dirname(entry.file), entry.route);
-    normalized.push(
-      normalizeScreen(root, { route: entry.route, id: entry.id, resolveRoute }),
-    );
+    normalized.push(normalizeScreen(root, { route: entry.route, id: entry.id, resolveRoute }));
     const last = normalized[normalized.length - 1]!;
     metas.push({
       id: entry.id,

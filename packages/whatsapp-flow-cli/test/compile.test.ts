@@ -18,11 +18,7 @@ describe("compileFlow (end-to-end)", () => {
       PREFERENCES: ["CONFIRM"],
       CONFIRM: [],
     });
-    expect(r.flow.screens.map((s) => s.id)).toEqual([
-      "START",
-      "PREFERENCES",
-      "CONFIRM",
-    ]);
+    expect(r.flow.screens.map((s) => s.id)).toEqual(["START", "PREFERENCES", "CONFIRM"]);
     expect(r.flow).toMatchSnapshot();
   });
 
@@ -81,14 +77,14 @@ describe("compileFlow (end-to-end)", () => {
   });
 
   it("fails on duplicate field names", async () => {
-    await expect(
-      compileFlow(at("fixtures/invalid-duplicate-fields")),
-    ).rejects.toThrow(/more than one field named "email"/);
+    await expect(compileFlow(at("fixtures/invalid-duplicate-fields"))).rejects.toThrow(
+      /more than one field named "email"/,
+    );
   });
 
   it("fails on unsupported components", async () => {
-    await expect(
-      compileFlow(at("fixtures/invalid-unsupported-component")),
-    ).rejects.toThrow(/Raw element <div>/);
+    await expect(compileFlow(at("fixtures/invalid-unsupported-component"))).rejects.toThrow(
+      /Raw element <div>/,
+    );
   });
 });

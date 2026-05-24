@@ -82,9 +82,7 @@ describe("display components", () => {
   });
 
   it("TextBody with markdown / font-weight / strikethrough", () => {
-    expect(
-      inLayout(<TextBody text="B" markdown fontWeight="bold" strikethrough />),
-    ).toEqual({
+    expect(inLayout(<TextBody text="B" markdown fontWeight="bold" strikethrough />)).toEqual({
       type: "TextBody",
       text: "B",
       markdown: true,
@@ -172,19 +170,8 @@ describe("input components", () => {
   it("Dropdown with full data-source items and on-select-action", () => {
     expect(
       inForm(
-        <Dropdown
-          name="d"
-          label="D"
-          onSelectAction={<UpdateData data={{ x: field("d") }} />}
-        >
-          <Option
-            id="a"
-            title="A"
-            description="desc"
-            metadata="m"
-            enabled={false}
-            altText="alt"
-          />
+        <Dropdown name="d" label="D" onSelectAction={<UpdateData data={{ x: field("d") }} />}>
+          <Option id="a" title="A" description="desc" metadata="m" enabled={false} altText="alt" />
           <Option title="B" />
         </Dropdown>,
       ),
@@ -193,7 +180,14 @@ describe("input components", () => {
       name: "d",
       label: "D",
       "data-source": [
-        { id: "a", title: "A", description: "desc", metadata: "m", enabled: false, "alt-text": "alt" },
+        {
+          id: "a",
+          title: "A",
+          description: "desc",
+          metadata: "m",
+          enabled: false,
+          "alt-text": "alt",
+        },
         { id: "1", title: "B" },
       ],
       "on-select-action": { name: "update_data", payload: { x: "${form.d}" } },
@@ -272,7 +266,9 @@ describe("input components", () => {
 
   it("OptIn with on-click-action", () => {
     expect(
-      inForm(<OptIn name="tos" label="Agree" required onClickAction={<OpenURL url="https://t" />} />),
+      inForm(
+        <OptIn name="tos" label="Agree" required onClickAction={<OpenURL url="https://t" />} />,
+      ),
     ).toEqual({
       type: "OptIn",
       name: "tos",
@@ -284,7 +280,9 @@ describe("input components", () => {
 
   it("DatePicker with unavailable-dates", () => {
     expect(
-      inForm(<DatePicker name="d" label="D" minDate="2026-01-01" unavailableDates={["2026-01-02"]} />),
+      inForm(
+        <DatePicker name="d" label="D" minDate="2026-01-01" unavailableDates={["2026-01-02"]} />,
+      ),
     ).toEqual({
       type: "DatePicker",
       name: "d",
@@ -309,7 +307,13 @@ describe("input components", () => {
   it("PhotoPicker", () => {
     expect(
       inForm(
-        <PhotoPicker name="p" label="P" photoSource="gallery" minUploadedPhotos={1} maxFileSizeKb={1024} />,
+        <PhotoPicker
+          name="p"
+          label="P"
+          photoSource="gallery"
+          minUploadedPhotos={1}
+          maxFileSizeKb={1024}
+        />,
       ),
     ).toEqual({
       type: "PhotoPicker",
@@ -397,12 +401,7 @@ describe("structural components", () => {
 
   it("NavigationList builds list-items and resolves a navigate action", () => {
     const nav = inLayout(
-      <NavigationList
-        name="m"
-        label="Menu"
-        mediaSize="regular"
-        onClickAction={<Next to="/done" />}
-      >
+      <NavigationList name="m" label="Menu" mediaSize="regular" onClickAction={<Next to="/done" />}>
         <NavItem id="a" title="A" description="d" metadata="x" image="img" tags={["t"]} />
       </NavigationList>,
       { "/done": "DONE" },
@@ -430,7 +429,14 @@ describe("actions", () => {
     inForm(<Footer>{child as never}</Footer>, routes)["on-click-action"] as Any;
 
   it("Next -> navigate with payload", () => {
-    expect(action(<Next to="/x" data={{ a: field("a") }}>Go</Next>, { "/x": "X" })).toEqual({
+    expect(
+      action(
+        <Next to="/x" data={{ a: field("a") }}>
+          Go
+        </Next>,
+        { "/x": "X" },
+      ),
+    ).toEqual({
       name: "navigate",
       next: { type: "screen", name: "X" },
       payload: { a: "${form.a}" },
@@ -445,7 +451,13 @@ describe("actions", () => {
   });
 
   it("Exchange -> data_exchange with folded action name", () => {
-    expect(action(<Exchange action="op" data={{ a: field("a") }}>Go</Exchange>)).toEqual({
+    expect(
+      action(
+        <Exchange action="op" data={{ a: field("a") }}>
+          Go
+        </Exchange>,
+      ),
+    ).toEqual({
       name: "data_exchange",
       payload: { action: "op", a: "${form.a}" },
     });

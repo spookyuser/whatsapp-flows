@@ -1,9 +1,4 @@
-import {
-  type AuthoringChild,
-  type AuthoringNode,
-  FRAGMENT_NODE,
-  TEXT_NODE,
-} from "./types.ts";
+import { type AuthoringChild, type AuthoringNode, FRAGMENT_NODE, TEXT_NODE } from "./types.ts";
 
 /** Create an authoring AST node. Used by the TSX layer's components. */
 export function node(
@@ -20,11 +15,7 @@ export function node(
 }
 
 export function isAuthoringNode(value: unknown): value is AuthoringNode {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    ($kindOf(value) === "flow-node")
-  );
+  return typeof value === "object" && value !== null && $kindOf(value) === "flow-node";
 }
 
 function $kindOf(value: object): unknown {

@@ -110,17 +110,22 @@ export function makeProgram(): Command {
     .option("--dry-run", "print the plan; send nothing to Meta")
     .option("--waba <target>", "prod | dev | both | WABA_ID (default: flows.config defaultWaba)")
     .description("Compile every flow and sync it to Meta (create/update drafts)")
-    .action(async (dir: string | undefined, opts: { publish?: boolean; dryRun?: boolean; waba?: string }) => {
-      try {
-        await pushProject(resolveTarget(dir), {
-          publish: opts.publish,
-          dryRun: opts.dryRun,
-          waba: opts.waba,
-        });
-      } catch (e) {
-        reportError(e);
-      }
-    });
+    .action(
+      async (
+        dir: string | undefined,
+        opts: { publish?: boolean; dryRun?: boolean; waba?: string },
+      ) => {
+        try {
+          await pushProject(resolveTarget(dir), {
+            publish: opts.publish,
+            dryRun: opts.dryRun,
+            waba: opts.waba,
+          });
+        } catch (e) {
+          reportError(e);
+        }
+      },
+    );
 
   program
     .command("ids")
@@ -128,14 +133,18 @@ export function makeProgram(): Command {
     .option("--waba <target>", "dev | prod | WABA label (default: flows.config defaultWaba)")
     .option("--env", "print as WHATSAPP_FLOWS='{...}' (one line, for a .env file)")
     .option("--out <path>", "write a typed TS module (export const WHATSAPP_FLOWS) to <path>")
-    .description("Print locked Meta asset ids ({ flows, templates }) for a WABA, from flows.lock.json")
-    .action(async (dir: string | undefined, opts: { waba?: string; env?: boolean; out?: string }) => {
-      try {
-        await runIds(resolveTarget(dir), { waba: opts.waba, env: opts.env, out: opts.out });
-      } catch (e) {
-        reportError(e);
-      }
-    });
+    .description(
+      "Print locked Meta asset ids ({ flows, templates }) for a WABA, from flows.lock.json",
+    )
+    .action(
+      async (dir: string | undefined, opts: { waba?: string; env?: boolean; out?: string }) => {
+        try {
+          await runIds(resolveTarget(dir), { waba: opts.waba, env: opts.env, out: opts.out });
+        } catch (e) {
+          reportError(e);
+        }
+      },
+    );
 
   program
     .command("schema")
@@ -151,8 +160,7 @@ export function makeProgram(): Command {
   return program;
 }
 
-const isMain =
-  process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
   makeProgram().parseAsync(process.argv);
 }

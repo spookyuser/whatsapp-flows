@@ -110,7 +110,9 @@ export async function runIds(flowsDir: string, opts: IdsOptions = {}): Promise<v
     await mkdir(path.dirname(dest), { recursive: true });
     await writeFile(dest, renderModule(map, label), "utf8");
     const count = Object.keys(map.flows).length + Object.keys(map.templates).length;
-    console.log(`✓ Wrote ${count} id(s) for WABA "${label}" to ${path.relative(process.cwd(), dest)}`);
+    console.log(
+      `✓ Wrote ${count} id(s) for WABA "${label}" to ${path.relative(process.cwd(), dest)}`,
+    );
   }
   if (opts.env) console.log(renderEnvLine(map));
   if (!opts.out && !opts.env) console.log(JSON.stringify(map, null, 2));

@@ -120,7 +120,13 @@ export const LEAF_SPECS: LeafSpec[] = [
     type: "ImageCarousel",
     category: "display",
     props: [
-      { prop: "images", key: "images", kind: "imageList", required: true, childComponent: "CarouselImage" },
+      {
+        prop: "images",
+        key: "images",
+        kind: "imageList",
+        required: true,
+        childComponent: "CarouselImage",
+      },
       { prop: "scaleType", key: "scale-type", kind: "str" },
       { prop: "aspectRatio", key: "aspect-ratio", kind: "num" },
       visible,
@@ -328,9 +334,7 @@ export const LEAF_SPECS: LeafSpec[] = [
   },
 ];
 
-export const LEAF_SPEC_BY_TYPE: Map<string, LeafSpec> = new Map(
-  LEAF_SPECS.map((s) => [s.type, s]),
-);
+export const LEAF_SPEC_BY_TYPE: Map<string, LeafSpec> = new Map(LEAF_SPECS.map((s) => [s.type, s]));
 
 /** Component types that may only appear inside a <Form>. */
 export const INPUT_TYPES_SET: Set<string> = new Set(

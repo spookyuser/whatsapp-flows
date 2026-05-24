@@ -13,8 +13,7 @@ import {
   field,
 } from "whatsapp-flow-tsx";
 
-const resolver = (map: Record<string, string>) => (route: string) =>
-  map[route] ?? null;
+const resolver = (map: Record<string, string>) => (route: string) => map[route] ?? null;
 
 describe("normalizeScreen", () => {
   it("normalizes a form screen with a navigate footer", () => {

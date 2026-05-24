@@ -1,9 +1,4 @@
-import {
-  type AuthoringNode,
-  FlowCompileError,
-  isAuthoringNode,
-  textOf,
-} from "whatsapp-flow-core";
+import { type AuthoringNode, FlowCompileError, isAuthoringNode, textOf } from "whatsapp-flow-core";
 import path from "node:path";
 import type { FlowsAppConfig, TemplateCategory, TemplateConfig } from "whatsapp-flow-tsx";
 import { loadModule } from "./load-module.ts";
@@ -214,7 +209,9 @@ function buildButtons(n: AuthoringNode, name: string): TemplateComponent {
     throw new FlowCompileError(`<Template.Buttons> in "${name}" has no buttons.`);
   }
   if (buttonNodes.length > 10) {
-    throw new FlowCompileError(`Template "${name}" has ${buttonNodes.length} buttons; Meta allows at most 10.`);
+    throw new FlowCompileError(
+      `Template "${name}" has ${buttonNodes.length} buttons; Meta allows at most 10.`,
+    );
   }
   return { type: "BUTTONS", buttons: buttonNodes.map((b) => buildButton(b, name)) };
 }
@@ -271,11 +268,7 @@ function renderText(children: AuthoringNode[], name: string, where: string): Ren
   return renderParts(children, name, where);
 }
 
-function renderParts(
-  parts: (string | AuthoringNode)[],
-  name: string,
-  where: string,
-): RenderedText {
+function renderParts(parts: (string | AuthoringNode)[], name: string, where: string): RenderedText {
   let text = "";
   let filled = "";
   const examples: VarUse[] = [];
@@ -322,10 +315,7 @@ function renderParts(
 
 /** Render a URL button target. Accepts a plain string (no variable) or a `tpl`
  * template with a single variable that must sit at the very end of the URL. */
-function renderUrl(
-  url: unknown,
-  name: string,
-): { text: string; example?: string } {
+function renderUrl(url: unknown, name: string): { text: string; example?: string } {
   if (typeof url === "string") return { text: url };
   if (isAuthoringNode(url) && url.component === "#tpl") {
     const parts = (url.props.parts as (string | AuthoringNode)[]) ?? [];
@@ -344,9 +334,7 @@ function renderUrl(
     }
     return { text: rendered.text, example: rendered.filled };
   }
-  throw new FlowCompileError(
-    `URL button in "${name}" must be a string or a tpl\`…\` template.`,
-  );
+  throw new FlowCompileError(`URL button in "${name}" must be a string or a tpl\`…\` template.`);
 }
 
 // --- helpers ---------------------------------------------------------------
@@ -377,7 +365,8 @@ export function renderTemplatePreview(t: CompiledTemplate): string[] {
     }
     const example = c.example as { body_text?: string[][]; header_text?: string[] } | undefined;
     const row = example?.body_text?.[0] ?? example?.header_text;
-    if (row && row.length) out.push(`            e.g. ${row.map((x) => JSON.stringify(x)).join(", ")}`);
+    if (row && row.length)
+      out.push(`            e.g. ${row.map((x) => JSON.stringify(x)).join(", ")}`);
   }
   return out;
 }

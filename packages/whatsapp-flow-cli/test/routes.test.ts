@@ -15,9 +15,7 @@ describe("buildRoutes", () => {
   const dir = path.join("/flows", "x", "screens");
 
   it("builds a route table with stable ids", () => {
-    const files = ["confirm.tsx", "index.tsx", "preferences.tsx"].map((f) =>
-      path.join(dir, f),
-    );
+    const files = ["confirm.tsx", "index.tsx", "preferences.tsx"].map((f) => path.join(dir, f));
     const routes = buildRoutes(files, dir);
     expect(routes.map((r) => [r.route, r.id])).toEqual([
       ["/confirm", "CONFIRM"],

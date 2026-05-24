@@ -38,14 +38,10 @@ export async function loadConfig(flowDir: string): Promise<ResolvedConfig> {
   const mod = await loadModule(configPath);
   const config = (mod.default ?? mod.config) as FlowConfig | undefined;
   if (!config || typeof config.name !== "string") {
-    throw new FlowCompileError(
-      `flow.config.ts must \`export default defineFlow({ name, ... })\`.`,
-    );
+    throw new FlowCompileError(`flow.config.ts must \`export default defineFlow({ name, ... })\`.`);
   }
 
-  const output = config.output
-    ? path.resolve(dir, config.output)
-    : path.resolve(dir, "flow.json");
+  const output = config.output ? path.resolve(dir, config.output) : path.resolve(dir, "flow.json");
 
   return {
     name: config.name,

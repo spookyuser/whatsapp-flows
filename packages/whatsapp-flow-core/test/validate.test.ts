@@ -38,9 +38,7 @@ const good: FlowJson = {
           {
             type: "Form",
             name: "form",
-            children: [
-              { type: "Footer", label: "End", "on-click-action": { name: "complete" } },
-            ],
+            children: [{ type: "Footer", label: "End", "on-click-action": { name: "complete" } }],
           },
         ],
       },
@@ -74,13 +72,17 @@ describe("validateFlow", () => {
   });
 
   it("rejects unserializable values", () => {
-    const bad = clone() as unknown as { screens: { layout: { children: { children: { label: unknown }[] }[] } }[] };
+    const bad = clone() as unknown as {
+      screens: { layout: { children: { children: { label: unknown }[] }[] } }[];
+    };
     bad.screens[0]!.layout.children[0]!.children[0]!.label = () => {};
     expect(() => validateFlow(bad as unknown as FlowJson)).toThrow();
   });
 
   it("rejects stray keys via the schema", () => {
-    const bad = clone() as unknown as { screens: { layout: { children: Record<string, unknown>[] }[] }[] };
+    const bad = clone() as unknown as {
+      screens: { layout: { children: Record<string, unknown>[] }[] }[];
+    };
     bad.screens[0]!.layout.children[0]!.$kind = "flow-node";
     expect(() => validateFlow(bad as unknown as FlowJson)).toThrow();
   });
@@ -90,8 +92,6 @@ describe("validateFlow", () => {
       { id: "START", route: "/", terminal: false, completes: false, edgeCount: 0 },
       { id: "DONE", route: "/done", terminal: true, completes: true, edgeCount: 0 },
     ];
-    expect(() => validateFlow(good, { screens: lonely, strict: true })).toThrow(
-      /dead end/,
-    );
+    expect(() => validateFlow(good, { screens: lonely, strict: true })).toThrow(/dead end/);
   });
 });

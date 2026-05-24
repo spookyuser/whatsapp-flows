@@ -1,13 +1,7 @@
 import { FlowCompileError } from "./errors.ts";
 import { isAuthoringNode, textOf } from "./node.ts";
 import { routeToFilePath } from "./route-id.ts";
-import {
-  isEnumKind,
-  INPUT_TYPES_SET,
-  LEAF_SPEC_BY_TYPE,
-  type LeafSpec,
-  type PropKind,
-} from "./specs.ts";
+import { isEnumKind, LEAF_SPEC_BY_TYPE, type LeafSpec, type PropKind } from "./specs.ts";
 import {
   type AuthoringNode,
   type DataSourceItem,
@@ -42,10 +36,7 @@ interface Build {
 
 const ACTION_COMPONENTS = ["Next", "Complete", "Exchange", "OpenURL", "UpdateData"];
 
-export function normalizeScreen(
-  root: unknown,
-  opts: NormalizeScreenOptions,
-): NormalizedScreen {
+export function normalizeScreen(root: unknown, opts: NormalizeScreenOptions): NormalizedScreen {
   if (!isAuthoringNode(root) || root.component !== "Screen") {
     throw new FlowCompileError(
       `Screen file for "${opts.route}" must export a default function that returns a <Screen>.`,
@@ -63,8 +54,7 @@ export function normalizeScreen(
   const layout = buildLayout(root, build);
 
   const explicitTerminal = root.props.terminal;
-  const terminal =
-    typeof explicitTerminal === "boolean" ? explicitTerminal : build.completes;
+  const terminal = typeof explicitTerminal === "boolean" ? explicitTerminal : build.completes;
 
   const screen = { id: opts.id } as FlowScreen;
   const title = root.props.title;
@@ -89,8 +79,7 @@ function buildLayout(screen: AuthoringNode, build: Build): FlowLayout {
   if (
     meaningful.length === 1 &&
     meaningful[0] !== undefined &&
-    (meaningful[0].component === "SingleColumnLayout" ||
-      meaningful[0].component === "Layout")
+    (meaningful[0].component === "SingleColumnLayout" || meaningful[0].component === "Layout")
   ) {
     layoutChildren = meaningful[0].children.filter((c) => c.component !== TEXT_NODE);
   } else {
@@ -111,11 +100,7 @@ function buildLayout(screen: AuthoringNode, build: Build): FlowLayout {
   };
 }
 
-function normalizeComponent(
-  n: AuthoringNode,
-  build: Build,
-  insideForm: boolean,
-): FlowComponent {
+function normalizeComponent(n: AuthoringNode, build: Build, insideForm: boolean): FlowComponent {
   const c = n.component;
 
   const leaf = LEAF_SPEC_BY_TYPE.get(c);
@@ -149,10 +134,10 @@ function normalizeComponent(
       return normalizeNavigationList(n, build);
     case "SingleColumnLayout":
     case "Layout":
-      throw new FlowCompileError(
-        `Nested <Layout> is not supported on screen "${build.route}".`,
-        { route: build.route, component: c },
-      );
+      throw new FlowCompileError(`Nested <Layout> is not supported on screen "${build.route}".`, {
+        route: build.route,
+        component: c,
+      });
     default:
       throw new FlowCompileError(
         `<${c}> is not a supported Flow component on screen "${build.route}".`,
@@ -199,9 +184,7 @@ function normalizeLeaf(n: AuthoringNode, spec: LeafSpec, build: Build): FlowComp
  * `dataSource` / `imageList` coercions, so `<Option>`/`<CarouselImage>` children
  * compose into the `data-source` / `images` arrays. */
 function collectChildItems(n: AuthoringNode, childComponent: string): Record<string, unknown>[] {
-  return n.children
-    .filter((c) => c.component === childComponent)
-    .map((c) => itemObject(c));
+  return n.children.filter((c) => c.component === childComponent).map((c) => itemObject(c));
 }
 
 function itemObject(c: AuthoringNode): Record<string, unknown> {
@@ -275,12 +258,7 @@ function coerceDataSource(
   });
 }
 
-function coerceImageList(
-  value: unknown,
-  component: string,
-  prop: string,
-  build: Build,
-): unknown[] {
+function coerceImageList(value: unknown, component: string, prop: string, build: Build): unknown[] {
   if (!Array.isArray(value) || value.length === 0) {
     throw new FlowCompileError(
       `<${component}> "${prop}" must be a non-empty array of images on screen "${build.route}".`,
@@ -303,12 +281,7 @@ function coerceImageList(
 
 // --- Actions ---------------------------------------------------------------
 
-function coerceAction(
-  value: unknown,
-  build: Build,
-  component: string,
-  prop: string,
-): FlowAction {
+function coerceAction(value: unknown, build: Build, component: string, prop: string): FlowAction {
   if (isAuthoringNode(value)) return normalizeAction(value, build).action;
   if (isPlainObject(value) && typeof value.name === "string") {
     return value as unknown as FlowAction;
@@ -319,10 +292,7 @@ function coerceAction(
   );
 }
 
-function normalizeAction(
-  n: AuthoringNode,
-  build: Build,
-): { action: FlowAction; label: string } {
+function normalizeAction(n: AuthoringNode, build: Build): { action: FlowAction; label: string } {
   switch (n.component) {
     case "Next": {
       const to = requireStr(n, "to", build);
@@ -429,9 +399,7 @@ function normalizeFooter(n: AuthoringNode, build: Build): FlowComponent {
 function normalizeIf(n: AuthoringNode, build: Build, insideForm: boolean): FlowComponent {
   const condition = requireStr(n, "condition", build);
   const elseNode = n.children.find((c) => c.component === "Else");
-  const thenNodes = n.children.filter(
-    (c) => c.component !== TEXT_NODE && c.component !== "Else",
-  );
+  const thenNodes = n.children.filter((c) => c.component !== TEXT_NODE && c.component !== "Else");
   const out: Record<string, unknown> = {
     type: "If",
     condition,
@@ -446,11 +414,7 @@ function normalizeIf(n: AuthoringNode, build: Build, insideForm: boolean): FlowC
   return out as unknown as FlowComponent;
 }
 
-function normalizeSwitch(
-  n: AuthoringNode,
-  build: Build,
-  insideForm: boolean,
-): FlowComponent {
+function normalizeSwitch(n: AuthoringNode, build: Build, insideForm: boolean): FlowComponent {
   const value = requireStr(n, "value", build);
   const cases: Record<string, FlowComponent[]> = {};
   for (const child of n.children) {
@@ -472,10 +436,10 @@ function normalizeSwitch(
       .map((c) => normalizeComponent(c, build, insideForm));
   }
   if (Object.keys(cases).length === 0) {
-    throw new FlowCompileError(
-      `<Switch> on screen "${build.route}" needs at least one <Case>.`,
-      { route: build.route, component: "Switch" },
-    );
+    throw new FlowCompileError(`<Switch> on screen "${build.route}" needs at least one <Case>.`, {
+      route: build.route,
+      component: "Switch",
+    });
   }
   return { type: "Switch", value, cases } as unknown as FlowComponent;
 }
@@ -565,10 +529,10 @@ function collectFieldNames(components: FlowComponent[]): string[] {
 function requireStr(n: AuthoringNode, key: string, build: Build): string {
   const v = strProp(n, key);
   if (!v) {
-    throw new FlowCompileError(
-      `<${n.component}> on screen "${build.route}" is missing "${key}".`,
-      { route: build.route, component: n.component },
-    );
+    throw new FlowCompileError(`<${n.component}> on screen "${build.route}" is missing "${key}".`, {
+      route: build.route,
+      component: n.component,
+    });
   }
   return v;
 }

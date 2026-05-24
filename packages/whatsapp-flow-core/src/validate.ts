@@ -125,10 +125,14 @@ export function validateFlow(flow: FlowJson, opts: ValidateOptions = {}): Valida
 function findUnserializable(value: unknown, path: string): string[] {
   const out: string[] = [];
   const t = typeof value;
-  if (t === "function") out.push(`Value at "${path || "root"}" is a function and cannot be serialized.`);
-  else if (t === "symbol") out.push(`Value at "${path || "root"}" is a symbol and cannot be serialized.`);
-  else if (t === "bigint") out.push(`Value at "${path || "root"}" is a bigint and cannot be serialized.`);
-  else if (t === "undefined") out.push(`Value at "${path || "root"}" is undefined and cannot be serialized.`);
+  if (t === "function")
+    out.push(`Value at "${path || "root"}" is a function and cannot be serialized.`);
+  else if (t === "symbol")
+    out.push(`Value at "${path || "root"}" is a symbol and cannot be serialized.`);
+  else if (t === "bigint")
+    out.push(`Value at "${path || "root"}" is a bigint and cannot be serialized.`);
+  else if (t === "undefined")
+    out.push(`Value at "${path || "root"}" is undefined and cannot be serialized.`);
   else if (t === "number" && !Number.isFinite(value as number)) {
     out.push(`Value at "${path || "root"}" is ${String(value)} and cannot be serialized.`);
   } else if (Array.isArray(value)) {

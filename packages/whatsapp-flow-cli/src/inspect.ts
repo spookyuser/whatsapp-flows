@@ -1,4 +1,4 @@
-import type { FlowAction, FlowComponent, FlowScreen } from "whatsapp-flow-core";
+import type { FlowAction, FlowComponent } from "whatsapp-flow-core";
 import type { CompileResult } from "./build.ts";
 
 /** Lightweight, text-based preview of a compiled flow: route map, transitions,

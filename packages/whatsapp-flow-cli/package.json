@@ -16,7 +16,9 @@
   "files": ["dist", "skills"],
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts --clean",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "commander": "^14.0.3",

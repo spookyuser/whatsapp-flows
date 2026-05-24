@@ -63,8 +63,7 @@ export async function compileFlowFile(
   assertUnique(routes, file);
 
   const idByRoute = new Map(routes.map((r) => [r.route, r.id]));
-  const resolveRoute = (to: string): string | null =>
-    idByRoute.get(normalizeRoute(to)) ?? null;
+  const resolveRoute = (to: string): string | null => idByRoute.get(normalizeRoute(to)) ?? null;
 
   const baseDir = path.dirname(file);
   const startId = "START";
@@ -129,10 +128,7 @@ function kebab(name: string): string {
     .toLowerCase();
 }
 
-function pickStartExport(
-  screens: [string, unknown][],
-  start: string | undefined,
-): string {
+function pickStartExport(screens: [string, unknown][], start: string | undefined): string {
   const names = screens.map(([n]) => n);
   if (start) {
     const direct = names.find((n) => n === start);
@@ -178,10 +174,7 @@ function assertUnique(
 }
 
 /** Breadth-first order from the start screen, then any unreachable screens. */
-function orderFromStart(
-  normalized: NormalizedScreen[],
-  startId: string,
-): NormalizedScreen[] {
+function orderFromStart(normalized: NormalizedScreen[], startId: string): NormalizedScreen[] {
   const byId = new Map(normalized.map((n) => [n.screen.id, n]));
   const ordered: NormalizedScreen[] = [];
   const seen = new Set<string>();

@@ -9,7 +9,13 @@ const lock: Lockfile = {
     dev: {
       woolworths_login: { id: "100", rev: 1, hash: "a", kind: "flow" },
       legacy_flow: { id: "101", rev: 1, hash: "b" }, // no kind -> flow
-      "tpl:acme_welcome@en_US": { id: "200", rev: 1, hash: "c", kind: "template", status: "APPROVED" },
+      "tpl:acme_welcome@en_US": {
+        id: "200",
+        rev: 1,
+        hash: "c",
+        kind: "template",
+        status: "APPROVED",
+      },
     },
     prod: {
       woolworths_login: { id: "900", rev: 1, hash: "a", kind: "flow" },
@@ -35,7 +41,10 @@ describe("buildIdMap", () => {
 });
 
 describe("selectWaba", () => {
-  const app: FlowsAppConfig = { wabas: { dev: { id: "1" }, prod: { id: "2" } }, defaultWaba: "prod" };
+  const app: FlowsAppConfig = {
+    wabas: { dev: { id: "1" }, prod: { id: "2" } },
+    defaultWaba: "prod",
+  };
 
   it("uses the app defaultWaba when no flag is given", () => {
     expect(selectWaba(app, lock, undefined)).toBe("prod");
@@ -50,7 +59,9 @@ describe("selectWaba", () => {
   });
 
   it("errors when nothing is locked", () => {
-    expect(() => selectWaba(app, { version: 1, wabas: {} }, undefined)).toThrow(/whatsapp-flow push/);
+    expect(() => selectWaba(app, { version: 1, wabas: {} }, undefined)).toThrow(
+      /whatsapp-flow push/,
+    );
   });
 
   it("errors on an unknown WABA", () => {

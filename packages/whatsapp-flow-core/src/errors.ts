@@ -17,9 +17,7 @@ export class FlowCompileErrors extends Error {
   readonly errors: FlowCompileError[];
 
   constructor(errors: FlowCompileError[]) {
-    const body = errors
-      .map((e) => `  - ${e.route ? `[${e.route}] ` : ""}${e.message}`)
-      .join("\n");
+    const body = errors.map((e) => `  - ${e.route ? `[${e.route}] ` : ""}${e.message}`).join("\n");
     super(`Flow compilation failed with ${errors.length} error(s):\n${body}`);
     this.name = "FlowCompileErrors";
     this.errors = errors;

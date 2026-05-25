@@ -5,8 +5,11 @@ export {
   type FlowConfig,
   defineFlowsApp,
   type FlowsAppConfig,
-  type WabaConfig,
+  type EnvConfig,
+  type TokenContext,
+  type TokenResolver,
 } from "./define-flow.ts";
+export { fromCommand } from "./token.ts";
 export { defineTemplate, type TemplateConfig, type TemplateCategory } from "./define-template.ts";
 export {
   Template,

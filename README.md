@@ -27,24 +27,30 @@ flows/
   flows.config.ts                project config (the "next.config.ts" of flows)
   grocery.tsx                    one flow  ->  name "grocery"
   woolworths-login.tsx           one flow  ->  name "woolworths_login"
-  flows.lock.json                committed; maps each flow to its Meta id per WABA
-  whatsapp-flows.generated.ts    auto-written on push; typed ids for the current WABA
+  flows.lock.json                committed; maps each flow to its Meta id per env
+  whatsapp-flows.generated.ts    auto-written on push; typed ids for every env
 ```
 
 `flows.config.ts`:
 
 ```ts
-import { defineFlowsApp } from "whatsapp-flow-tsx";
+import { defineFlowsApp, fromCommand } from "whatsapp-flow-tsx";
 
 export default defineFlowsApp({
   version: "7.3",                                    // default Flow JSON version
-  waba: { id: process.env.WHATSAPP_WABA_ID! },       // one WABA per env file
+  wabas: {                                           // named deploy targets
+    dev: { id: "2142644013223594" },
+    prod: { id: "26870122239247230" },
+  },
+  defaultEnv: "dev",                                 // used when --env / WHATSAPP_ENV unset
+  token: fromCommand("convex env get WHATSAPP_ACCESS_TOKEN"), // optional; see Push & deploy
 });
 ```
 
-One WABA per checkout. Swap dev/prod by switching env files (`.env.local` vs
-`.env.production`), not by passing a flag. The lockfile is keyed by WABA id, so
-committing it preserves both dev and prod state across env switches.
+Declare one or more **named environments** under `wabas`. Pick the target with
+`--env <name>`, the `WHATSAPP_ENV` var, or `defaultEnv` (a lone env is auto-picked).
+The committed `flows.lock.json` is **keyed by env name**, so it holds dev and prod
+state side by side.
 
 ### A flow is a file
 
@@ -180,8 +186,9 @@ outline) — **not** a faithful render of WhatsApp's UI.
 
 ## Push & deploy
 
-`push` compiles every flow, then reconciles it against Meta and a committed
-**`flows.lock.json`** (scoped per WABA id: `name → { id, rev, hash }`):
+`push` targets one env (`--env`, `WHATSAPP_ENV`, or `defaultEnv`), compiles every
+flow, then reconciles it against Meta and a committed **`flows.lock.json`** (keyed
+by env name: `env → { wabaId, assets: { name → { id, rev, hash } } }`):
 
 - **Change detection** — each compiled flow is hashed; an unchanged flow is **skipped**.
 - **Create / adopt** — a flow with no lock entry is created on Meta; if a live flow
@@ -190,9 +197,12 @@ outline) — **not** a faithful render of WhatsApp's UI.
 - **Publish** — every touched flow is published (goes live) on every push. Iterate in
   app code with feature flags, not by holding back the publish step.
 - **Versioning** — `rev` in the lockfile bumps on every change.
+- **One env per push** — to deploy to dev and prod, run `push --env dev` then
+  `push --env prod`. (A flow of the same name is a distinct Meta asset per WABA.)
 - **Typed ids** — after a successful push, `whatsapp-flows.generated.ts` is rewritten
-  next to `flows.config.ts` so `import { WHATSAPP_FLOWS } from "..."` resolves to the
-  current env's ids. Override the path via `generatedIdsPath` in `flows.config.ts`.
+  next to `flows.config.ts`. It exports every env plus `flowId(name, env?)` /
+  `templateId(name, env?)` helpers (env defaults to `WHATSAPP_ENV`), so app code does
+  `flowId("woolworths_login")`. Override the path via `generatedIdsPath`.
 
 **Templates** ride the same pipeline and lockfile. A template with no lock entry (and
 no live template of the same name + language) is **created**, which submits it to Meta
@@ -201,12 +211,50 @@ for async review; a changed template is **edited** in place; an unchanged one is
 review — and the lockfile records each template's last known status (e.g. `PENDING`).
 Template keys are scoped `tpl:<name>@<language>`.
 
-`push` needs `WHATSAPP_WABA_ID` and `WHATSAPP_ACCESS_TOKEN` in the environment. Load
-them however you like, e.g. `dotenvx run -f .env.local -- whatsapp-flow push`. Start
-with `push --dry-run` to preview the plan.
+`push` needs a Graph API **access token**. Set `token` in `flows.config.ts` — a
+string, a JSON-friendly `{ command: "…" }`, the `fromCommand("…")` helper, or a
+function `(ctx) => string | Promise<string>` — or omit it to fall back to the
+`WHATSAPP_ACCESS_TOKEN` env var (e.g. `dotenvx run -f .env.local -- whatsapp-flow
+push`). `fromCommand` is a shell-*out*, not a shell: it splits on whitespace with no
+quoting or pipes. Start with `push --dry-run` to preview the plan.
 
 Configuring a flow's `endpoint_uri` (for data-exchange flows) is **not** done by
 `push`; set it via the Graph API / Flow Builder separately.
+
+### Config in package.json, and walk-up discovery
+
+Every command walks up from the cwd to find the flows app, so you can run it from a
+subdirectory. The config can live in `flows.config.ts` **or** a `whatsappFlows` key
+in `package.json` (handy when the token is the JSON-friendly `{ command }` form and
+no `.ts` config is needed):
+
+```jsonc
+// package.json
+{
+  "whatsappFlows": {
+    "wabas": { "dev": { "id": "2142…" }, "prod": { "id": "2687…" } },
+    "defaultEnv": "dev",
+    "token": { "command": "convex env get WHATSAPP_ACCESS_TOKEN" }
+  }
+}
+```
+
+`flows.config.ts` wins when both are present.
+
+### Lockfile migration
+
+A pre-existing `flows.lock.json` keyed by raw WABA id (v1) is upgraded in place with
+`whatsapp-flow migrate-lock`, which pairs each raw WABA id with an env name from your
+config's `wabas`. WABA ids not in the config are dropped with a warning.
+
+### tsconfig preset
+
+Author projects can extend the shipped preset instead of hand-listing JSX options:
+
+```jsonc
+// flows/tsconfig.json
+{ "extends": "whatsapp-flow-tsx/tsconfig" }
+```
 
 ## Images
 

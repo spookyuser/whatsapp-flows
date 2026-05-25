@@ -1,0 +1,15 @@
+{
+  "name": "fixture-pkg-config-app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "whatsappFlows": {
+    "version": "7.3",
+    "wabas": {
+      "dev": { "id": "555" },
+      "prod": { "id": "777" }
+    },
+    "defaultEnv": "dev",
+    "token": { "command": "echo pkg-token" }
+  }
+}

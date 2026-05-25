@@ -31,13 +31,17 @@ import { defineFlowsApp } from "whatsapp-flow-tsx";
 
 export default defineFlowsApp({
   language: "en_US",                              // default language for templates
-  waba: { id: process.env.WHATSAPP_WABA_ID! },    // one WABA per env file
+  wabas: {                                        // named deploy targets
+    dev: { id: "2142644013223594" },
+    prod: { id: "26870122239247230" },
+  },
+  defaultEnv: "dev",
 });
 ```
 
-One WABA per checkout — swap dev/prod by switching env files (`.env.local` vs
-`.env.production`), not by passing a flag. See the `whatsapp-flow-tsx` skill for the
-full dev/prod workflow.
+Declare named environments under `wabas`; select one with `--env <name>`,
+`WHATSAPP_ENV`, or `defaultEnv`. See the `whatsapp-flow-tsx` skill for the full
+dev/prod workflow and token config.
 
 ## A template is a file
 

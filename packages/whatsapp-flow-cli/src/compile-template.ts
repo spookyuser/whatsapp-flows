@@ -36,7 +36,7 @@ export function isTemplateModule(mod: Record<string, unknown>): boolean {
  * per component, and their examples are gathered into the shape Meta requires. */
 export async function compileTemplateFile(
   file: string,
-  app: FlowsAppConfig = {},
+  app: Pick<FlowsAppConfig, "language"> = {},
   preloaded?: Record<string, unknown>,
 ): Promise<CompiledTemplate> {
   const mod = preloaded ?? (await loadModule(file));

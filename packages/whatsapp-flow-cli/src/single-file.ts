@@ -30,7 +30,7 @@ const DEFAULT_VERSION = "7.3";
  * start screen at route "/"; every other export routes to "/<kebab-of-export-name>". */
 export async function compileFlowFile(
   file: string,
-  app: FlowsAppConfig = {},
+  app: Pick<FlowsAppConfig, "version"> = {},
   preloaded?: Record<string, unknown>,
 ): Promise<CompiledFlow> {
   const mod = preloaded ?? (await loadModule(file));

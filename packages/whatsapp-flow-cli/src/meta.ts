@@ -10,18 +10,6 @@ export interface MetaFlow {
   status?: string;
 }
 
-/** Resolve the Graph API access token from WHATSAPP_ACCESS_TOKEN. */
-export function getToken(): string {
-  const token = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
-  if (!token) {
-    throw new FlowCompileError(
-      "WHATSAPP_ACCESS_TOKEN is not set. Export it, or run via your env loader, e.g.\n" +
-        "  dotenvx run -f .env.local -- pnpm flows push",
-    );
-  }
-  return token;
-}
-
 interface GraphOptions {
   method?: string;
   query?: Record<string, string | undefined>;
@@ -47,7 +35,9 @@ async function graph(apiPath: string, token: string, options: GraphOptions = {})
   const text = await response.text();
   const data = text ? JSON.parse(text) : {};
   if (!response.ok) {
-    throw new FlowCompileError(formatMetaError(options.method ?? "GET", url, response.status, data));
+    throw new FlowCompileError(
+      formatMetaError(options.method ?? "GET", url, response.status, data),
+    );
   }
   return data;
 }

@@ -130,13 +130,16 @@ pnpm flows ids                              # resolved env's locked ids as JSON 
 pnpm flows ids --env prod                   # ids for a specific env
 pnpm flows ids --env-line                   # WHATSAPP_FLOWS='{...}' one-liner
 pnpm flows ids --out path/to/ids.ts         # custom path for the typed all-envs module
-
-pnpm flows migrate-lock      # one-time: upgrade a v1 (WABA-keyed) lockfile to v2 (env-keyed)
 ```
 
 Every command takes `--env <name>` and walks up from the cwd to find
 `flows.config.ts` (so it works from a subdirectory). Config can also live in
 `package.json#whatsappFlows` instead of a `flows.config.ts`.
+
+A `flows.lock.json` from before named envs (v1, keyed by raw WABA id) is rejected
+with an upgrade hint. Migrate it by hand once: set `"version": 2` and replace the
+top-level `"wabas"` map with `"envs"`, moving each WABA's entries under the env name
+that targets it — `"envs": { "<env>": { "wabaId": "<id>", "assets": { …old map… } } }`.
 
 `push` needs an access token — from `token` in `flows.config.ts` or, by default,
 `WHATSAPP_ACCESS_TOKEN` (e.g. `dotenvx run -f .env.local -- whatsapp-flow push`). It

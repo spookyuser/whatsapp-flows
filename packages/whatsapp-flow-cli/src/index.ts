@@ -6,14 +6,12 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { runIds } from "./ids.ts";
-import { runMigrateLock } from "./migrate.ts";
 import { buildProject, checkProject, inspectProject, pushProject } from "./push.ts";
 
 export { compileFlowFile } from "./single-file.ts";
 export { compileTemplateFile, type CompiledTemplate } from "./compile-template.ts";
 export { pushProject, checkProject, buildProject, inspectProject } from "./push.ts";
 export { runIds, buildIdMap, buildAllEnvIdMaps, type EnvIdMap, type AllEnvIdMaps } from "./ids.ts";
-export { runMigrateLock } from "./migrate.ts";
 
 function reportError(e: unknown): never {
   if (e instanceof FlowCompileErrors) {
@@ -113,18 +111,6 @@ export function makeProgram(): Command {
         }
       },
     );
-
-  program
-    .command("migrate-lock")
-    .argument("[dir]", "flows app dir (default: walk up to find flows.config.ts)")
-    .description("Upgrade flows.lock.json from v1 (keyed by WABA id) to v2 (keyed by env name)")
-    .action(async (dir: string | undefined) => {
-      try {
-        await runMigrateLock(dir);
-      } catch (e) {
-        reportError(e);
-      }
-    });
 
   program
     .command("schema")

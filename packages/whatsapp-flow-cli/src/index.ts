@@ -6,12 +6,14 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { runIds } from "./ids.ts";
+import { runTemplates } from "./list-templates.ts";
 import { buildProject, checkProject, inspectProject, pushProject } from "./push.ts";
 
 export { compileFlowFile } from "./single-file.ts";
 export { compileTemplateFile, type CompiledTemplate } from "./compile-template.ts";
 export { pushProject, checkProject, buildProject, inspectProject } from "./push.ts";
 export { runIds, buildIdMap, buildAllEnvIdMaps, type EnvIdMap, type AllEnvIdMaps } from "./ids.ts";
+export { runTemplates, renderTemplateTable } from "./list-templates.ts";
 
 function reportError(e: unknown): never {
   if (e instanceof FlowCompileErrors) {
@@ -111,6 +113,20 @@ export function makeProgram(): Command {
         }
       },
     );
+
+  program
+    .command("templates")
+    .argument("[dir]", "flows app dir (default: walk up to find flows.config.ts)")
+    .option("--env <name>", "target env (default: WHATSAPP_ENV, defaultEnv, or the only env)")
+    .option("--all-envs", "query every configured env's WABA")
+    .description("List live message templates on Meta (name, language, category, status, id)")
+    .action(async (dir: string | undefined, opts: { env?: string; allEnvs?: boolean }) => {
+      try {
+        await runTemplates(dir, { env: opts.env, allEnvs: opts.allEnvs });
+      } catch (e) {
+        reportError(e);
+      }
+    });
 
   program
     .command("schema")

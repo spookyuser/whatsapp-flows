@@ -147,6 +147,21 @@ export interface MetaTemplate {
   category?: string;
 }
 
+/** List every live message template on a WABA, following Meta's paging cursors
+ * (a WABA can hold more than one page of templates). */
+export async function listTemplates(wabaId: string, token: string): Promise<MetaTemplate[]> {
+  const all: MetaTemplate[] = [];
+  let after: string | undefined;
+  do {
+    const data = (await graph(`${wabaId}/message_templates`, token, {
+      query: { fields: "id,name,language,status,category", limit: "200", after },
+    })) as { data?: MetaTemplate[]; paging?: { next?: string; cursors?: { after?: string } } };
+    all.push(...(data.data ?? []));
+    after = data.paging?.next ? data.paging.cursors?.after : undefined;
+  } while (after);
+  return all;
+}
+
 /** Find a template by exact name + language on a WABA, or null. */
 export async function findTemplateByName(
   wabaId: string,

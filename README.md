@@ -177,12 +177,20 @@ whatsapp-flow build                  # compile all → flows/.build/ (<name>.jso
 whatsapp-flow push --dry-run         # show what would sync to Meta (create/update/edit/skip)
 whatsapp-flow push                   # sync + publish to the current env's WABA
 whatsapp-flow ids                    # print locked ids as JSON (push auto-writes the typed module)
+whatsapp-flow templates              # list LIVE templates on Meta (name/lang/category/status/id)
 
 whatsapp-flow schema  --out flow.schema.json        # emit the JSON Schema used for verification
 ```
 
 `inspect` is a lightweight text preview (route map + transitions + per-screen
 outline) — **not** a faithful render of WhatsApp's UI.
+
+`templates` is the only command that reads **live** from Meta: it calls
+`/{WABA}/message_templates` and prints what is actually on the platform right now
+(including templates created outside this tool), with each template's review `status`
+so you can see which are live (`APPROVED`). It targets the resolved env by default;
+`--all-envs` queries every configured env's WABA. Being a live read, it needs an access
+token (same resolution as `push`).
 
 ## Push & deploy
 

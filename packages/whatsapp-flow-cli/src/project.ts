@@ -2,7 +2,7 @@ import { FlowCompileError } from "whatsapp-flow-core";
 import { existsSync, readFileSync } from "node:fs";
 import { readdir } from "node:fs/promises";
 import path from "node:path";
-import type { FlowsAppConfig } from "whatsapp-flow-tsx";
+import { type FlowsAppConfig, fromCommand, type TokenContext } from "whatsapp-flow-tsx";
 import { loadModule } from "./load-module.ts";
 
 const CONFIG_NAME = "flows.config.ts";
@@ -109,26 +109,45 @@ export function resolveWabaId(app: FlowsAppConfig, env: string): string {
   return id;
 }
 
+/** Resolve the flows app directory: an explicit `flowsDir` (resolved against the
+ * cwd), or, when omitted, the first flows app found walking up from the cwd. */
+export function resolveProjectDir(flowsDir?: string): string {
+  if (flowsDir !== undefined) return path.resolve(flowsDir);
+  const found = findProjectDir(process.cwd());
+  if (!found) {
+    throw new FlowCompileError(
+      `Walked up from ${process.cwd()} and found no ${CONFIG_NAME} ` +
+        `(or package.json#${PKG_KEY}) up the tree.`,
+    );
+  }
+  return found;
+}
+
+/** Resolve the Graph API access token: function form > `{ command }` > literal
+ * string > `WHATSAPP_ACCESS_TOKEN` env var > error. */
+export async function resolveToken(app: FlowsAppConfig, ctx: TokenContext): Promise<string> {
+  const t = app.token;
+  if (typeof t === "function") return (await t(ctx)).trim();
+  if (t && typeof t === "object" && typeof t.command === "string") {
+    return fromCommand(t.command)(ctx).trim();
+  }
+  if (typeof t === "string" && t.trim()) return t.trim();
+  const env = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
+  if (env) return env;
+  throw new FlowCompileError(
+    "No access token. Set `token` in flows.config.ts (a string, `{ command }`, or a " +
+      "function), or export WHATSAPP_ACCESS_TOKEN, e.g.\n" +
+      "  dotenvx run -f .env.local -- pnpm flows push",
+  );
+}
+
 /** Load a flows app. With no `flowsDir`, walks up from the cwd to discover one;
  * pass "." for cwd-explicit. Resolves the target env and its WABA id. */
 export async function loadProject(
   flowsDir?: string,
   opts: LoadProjectOptions = {},
 ): Promise<LoadedProject> {
-  let dir: string;
-  if (flowsDir === undefined) {
-    const found = findProjectDir(process.cwd());
-    if (!found) {
-      throw new FlowCompileError(
-        `Walked up from ${process.cwd()} and found no ${CONFIG_NAME} ` +
-          `(or package.json#${PKG_KEY}) up the tree.`,
-      );
-    }
-    dir = found;
-  } else {
-    dir = path.resolve(flowsDir);
-  }
-
+  const dir = resolveProjectDir(flowsDir);
   const app = await loadAppConfig(dir);
 
   const entries = await readdir(dir, { withFileTypes: true });

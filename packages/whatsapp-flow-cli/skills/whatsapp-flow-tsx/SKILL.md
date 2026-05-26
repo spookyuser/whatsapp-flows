@@ -130,7 +130,14 @@ pnpm flows ids                              # resolved env's locked ids as JSON 
 pnpm flows ids --env prod                   # ids for a specific env
 pnpm flows ids --env-line                   # WHATSAPP_FLOWS='{...}' one-liner
 pnpm flows ids --out path/to/ids.ts         # custom path for the typed all-envs module
+
+pnpm flows templates                        # list LIVE templates on Meta (name/lang/category/status/id)
+pnpm flows templates --all-envs             # same, for every configured env's WABA
 ```
+
+`templates` is the only live read: it queries Meta's `/{WABA}/message_templates`
+(needs an access token) and shows each template's review `status`, so it answers
+"which templates are live on this WABA, and in what category".
 
 Every command takes `--env <name>` and walks up from the cwd to find
 `flows.config.ts` (so it works from a subdirectory). Config can also live in

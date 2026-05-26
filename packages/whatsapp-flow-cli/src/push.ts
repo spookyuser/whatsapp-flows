@@ -1,7 +1,7 @@
 import { FlowCompileError } from "whatsapp-flow-core";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { type FlowsAppConfig, fromCommand, type TokenContext } from "whatsapp-flow-tsx";
+import type { FlowsAppConfig } from "whatsapp-flow-tsx";
 import {
   type CompiledTemplate,
   compileTemplateFile,
@@ -20,7 +20,7 @@ import {
   publishFlow,
   uploadFlowJson,
 } from "./meta.ts";
-import { loadProject } from "./project.ts";
+import { loadProject, resolveToken } from "./project.ts";
 import { type CompiledFlow, compileFlowFile } from "./single-file.ts";
 
 interface CompiledApp {
@@ -60,24 +60,6 @@ async function compileAll(flowsDir?: string, opts: ProjectOptions = {}): Promise
     flows,
     templates,
   };
-}
-
-/** Resolve the Graph API access token: function form > `{ command }` > literal
- * string > `WHATSAPP_ACCESS_TOKEN` env var > error. */
-async function resolveToken(app: FlowsAppConfig, ctx: TokenContext): Promise<string> {
-  const t = app.token;
-  if (typeof t === "function") return (await t(ctx)).trim();
-  if (t && typeof t === "object" && typeof t.command === "string") {
-    return fromCommand(t.command)(ctx).trim();
-  }
-  if (typeof t === "string" && t.trim()) return t.trim();
-  const env = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
-  if (env) return env;
-  throw new FlowCompileError(
-    "No access token. Set `token` in flows.config.ts (a string, `{ command }`, or a " +
-      "function), or export WHATSAPP_ACCESS_TOKEN, e.g.\n" +
-      "  dotenvx run -f .env.local -- pnpm flows push",
-  );
 }
 
 function countLine(flows: CompiledFlow[], templates: CompiledTemplate[]): string {

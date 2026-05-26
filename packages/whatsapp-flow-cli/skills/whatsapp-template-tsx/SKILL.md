@@ -145,7 +145,16 @@ pnpm flows inspect           # outline templates: text with {{n}} + example valu
 pnpm flows build             # compile all → flows/.build/<name>.template.json
 pnpm flows push --dry-run    # show what would sync to Meta (create/edit/skip)
 pnpm flows push              # create/edit templates on the current env's WABA
+
+pnpm flows templates         # list LIVE templates on Meta (name/lang/category/status/id)
+pnpm flows templates --all-envs  # same, for every configured env's WABA
 ```
+
+`templates` reads **live** from Meta (`GET /{WABA}/message_templates`, needs a
+token): it shows every template actually on the WABA — including ones created
+outside this tool — with its category and review `status` (so you can see which are
+live/`APPROVED`). Unlike `inspect` (which previews local source), this is the source
+of truth for what is deployed.
 
 `push` reconciles each template against Meta and `flows.lock.json` (key
 `tpl:<name>@<language>`, per WABA id):

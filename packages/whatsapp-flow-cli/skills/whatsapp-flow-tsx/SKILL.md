@@ -15,6 +15,10 @@ The same `flows/` app also authors **WhatsApp message templates** (the pre-appro
 text/media messages you *send* to start a conversation). Those are a separate asset
 with their own authoring rules — see the companion **`whatsapp-template-tsx`** skill.
 
+Upgrading an **older project** (a `flow.config.ts` + `screens/` folder per flow, a
+single `waba`/`tokenEnv`, or a WABA-keyed `flows.lock.json`) to the single-file,
+named-environment model below? Use the **`whatsapp-flows-migration`** skill.
+
 This skill covers the whole flow loop: write `.tsx`, compile, and **push** to Meta
 (`flows push`). Push always publishes — flows go live immediately. Lower-level Meta
 lifecycle on existing assets — preview, deprecate, delete, send, migrate, status —

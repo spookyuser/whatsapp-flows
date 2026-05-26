@@ -13,7 +13,7 @@ import {
 
 export const flow = defineFlow({
   name: "appointment_booking",
-  version: "7.2",
+  version: "7.3",
   dataApiVersion: "3.0",
   endpointUri: "https://example.com/flow",
 });

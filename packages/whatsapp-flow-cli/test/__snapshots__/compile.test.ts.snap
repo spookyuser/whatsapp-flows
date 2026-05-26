@@ -244,6 +244,6 @@ exports[`compileFlowFile (end-to-end) > emits data_api_version and folds the act
       "title": "Pick a slot",
     },
   ],
-  "version": "7.2",
+  "version": "7.3",
 }
 `;

@@ -9,7 +9,7 @@ import {
   defineFlow,
 } from "whatsapp-flow-tsx";
 
-export const flow = defineFlow({ name: "local_image", version: "7.2" });
+export const flow = defineFlow({ name: "local_image", version: "7.3" });
 
 export function Index() {
   return (

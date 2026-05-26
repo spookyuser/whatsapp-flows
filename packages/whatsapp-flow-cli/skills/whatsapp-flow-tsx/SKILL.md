@@ -15,9 +15,10 @@ The same `flows/` app also authors **WhatsApp message templates** (the pre-appro
 text/media messages you *send* to start a conversation). Those are a separate asset
 with their own authoring rules — see the companion **`whatsapp-template-tsx`** skill.
 
-Upgrading an **older project** (a `flow.config.ts` + `screens/` folder per flow, a
-single `waba`/`tokenEnv`, or a WABA-keyed `flows.lock.json`) to the single-file,
-named-environment model below? Use the **`whatsapp-flows-migration`** skill.
+For **UX/design decisions** rather than mechanics — how many screens, whether a flow
+needs an endpoint, which input to use, writing CTAs/titles/error messages, structuring
+opt-in/login/termination, or reviewing a flow against Meta's guidelines — see the
+companion **`whatsapp-flows-best-practices`** skill.
 
 This skill covers the whole flow loop: write `.tsx`, compile, and **push** to Meta
 (`flows push`). Push always publishes — flows go live immediately. Lower-level Meta
@@ -146,11 +147,6 @@ pnpm flows templates --all-envs             # same, for every configured env's W
 Every command takes `--env <name>` and walks up from the cwd to find
 `flows.config.ts` (so it works from a subdirectory). Config can also live in
 `package.json#whatsappFlows` instead of a `flows.config.ts`.
-
-A `flows.lock.json` from before named envs (v1, keyed by raw WABA id) is rejected
-with an upgrade hint. Migrate it by hand once: set `"version": 2` and replace the
-top-level `"wabas"` map with `"envs"`, moving each WABA's entries under the env name
-that targets it — `"envs": { "<env>": { "wabaId": "<id>", "assets": { …old map… } } }`.
 
 `push` needs an access token — from `token` in `flows.config.ts` or, by default,
 `WHATSAPP_ACCESS_TOKEN` (e.g. `dotenvx run -f .env.local -- whatsapp-flow push`). It

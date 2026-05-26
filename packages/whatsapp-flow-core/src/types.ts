@@ -19,6 +19,7 @@ export interface FlowScreen {
   terminal?: boolean;
   success?: boolean;
   data?: Record<string, unknown>;
+  sensitive?: string[];
   layout: FlowLayout;
 }
 

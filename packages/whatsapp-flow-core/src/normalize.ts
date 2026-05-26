@@ -61,6 +61,7 @@ export function normalizeScreen(root: unknown, opts: NormalizeScreenOptions): No
   if (terminal) screen.terminal = true;
   if (typeof root.props.success === "boolean") screen.success = root.props.success;
   if (isPlainObject(root.props.data)) screen.data = root.props.data;
+  if (Array.isArray(root.props.sensitive)) screen.sensitive = root.props.sensitive as string[];
   screen.layout = layout;
 
   return {

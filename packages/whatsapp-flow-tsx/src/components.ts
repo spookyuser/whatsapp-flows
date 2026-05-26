@@ -18,6 +18,12 @@ export interface ScreenProps extends WithChildren {
   terminal?: boolean;
   success?: boolean;
   data?: Record<string, unknown>;
+  /**
+   * Field names to hide from the post-submit response summary (Flows >= 5.1).
+   * `password`/`passcode` text inputs are excluded automatically; list other
+   * fields here, e.g. `sensitive={["ssn", "dob"]}`.
+   */
+  sensitive?: string[];
 }
 export function Screen(props: ScreenProps): AuthoringNode {
   return el("Screen", props);

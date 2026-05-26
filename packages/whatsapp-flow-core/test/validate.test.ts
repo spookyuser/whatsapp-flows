@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { type FlowJson, type ScreenMeta, validateFlow } from "whatsapp-flow-core";
 
 const good: FlowJson = {
-  version: "7.2",
+  version: "7.3",
   routing_model: { START: ["DONE"], DONE: [] },
   screens: [
     {

@@ -41,8 +41,7 @@ export default defineFlowsApp({
 
 Declare named environments under `wabas`; select one with `--env <name>`,
 `WHATSAPP_ENV`, or `defaultEnv`. See the `whatsapp-flow-tsx` skill for the full
-dev/prod workflow and token config. Upgrading an older project (single `waba`,
-`namePrefix`, or a WABA-keyed lockfile)? Use the **`whatsapp-flows-migration`** skill.
+dev/prod workflow and token config.
 
 ## A template is a file
 

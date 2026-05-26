@@ -340,6 +340,22 @@ describe("structural components", () => {
     });
   });
 
+  it("Screen carries the sensitive field list", () => {
+    const root = (
+      <Screen title="t" sensitive={["ssn", "dob"]}>
+        <Form name="form">
+          <TextInput name="ssn" label="SSN" />
+        </Form>
+      </Screen>
+    );
+    const { screen } = normalizeScreen(root, {
+      route: "/",
+      id: "START",
+      resolveRoute: resolve(),
+    });
+    expect(screen.sensitive).toEqual(["ssn", "dob"]);
+  });
+
   it("If with then and Else child", () => {
     expect(
       inLayout(

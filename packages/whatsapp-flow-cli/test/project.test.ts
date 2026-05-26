@@ -21,9 +21,9 @@ describe("single-file flows", () => {
   });
 
   it("derives the name from the filename and routes by export name", async () => {
-    const c = await compileFlowFile(at("fixtures/app/signup.tsx"), { version: "7.2" });
+    const c = await compileFlowFile(at("fixtures/app/signup.tsx"), { version: "7.3" });
     expect(c.name).toBe("signup");
-    expect(c.flow.version).toBe("7.2");
+    expect(c.flow.version).toBe("7.3");
     expect(c.flow.screens.map((s) => s.id)).toEqual(["START", "DETAILS"]);
     expect(c.flow.routing_model).toEqual({ START: ["DETAILS"], DETAILS: [] });
   });
@@ -41,7 +41,7 @@ describe("project loader", () => {
     expect(isProjectDir(at("fixtures"))).toBe(false);
 
     const project = await loadProject(at("fixtures/app"));
-    expect(project.app.version).toBe("7.2");
+    expect(project.app.version).toBe("7.3");
     expect(project.flowFiles.map((f) => path.basename(f))).toEqual(["login.tsx", "signup.tsx"]);
   });
 

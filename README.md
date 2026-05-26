@@ -249,34 +249,6 @@ no `.ts` config is needed):
 
 `flows.config.ts` wins when both are present.
 
-### Lockfile migration (v1 → v2)
-
-A pre-existing `flows.lock.json` keyed by raw WABA id (v1) is rejected with an
-upgrade hint. Migrate it by hand once: bump `version` to `2`, replace the top-level
-`wabas` map with an `envs` map, and move each WABA's entries under the env name that
-targets it (`wabaId` records which WABA the env points at). Drop any WABA that no
-longer maps to an env.
-
-```jsonc
-// before — v1 (keyed by raw WABA id)
-{
-  "version": 1,
-  "wabas": {
-    "2142644013223594": { "woolworths_login": { "id": "443…", "rev": 3, "hash": "…", "kind": "flow" } },
-    "26870122239247230": { "woolworths_login": { "id": "208…", "rev": 2, "hash": "…", "kind": "flow" } }
-  }
-}
-
-// after — v2 (keyed by env name)
-{
-  "version": 2,
-  "envs": {
-    "dev":  { "wabaId": "2142644013223594",  "assets": { "woolworths_login": { "id": "443…", "rev": 3, "hash": "…", "kind": "flow" } } },
-    "prod": { "wabaId": "26870122239247230", "assets": { "woolworths_login": { "id": "208…", "rev": 2, "hash": "…", "kind": "flow" } } }
-  }
-}
-```
-
 ### tsconfig preset
 
 Author projects can extend the shipped preset instead of hand-listing JSX options:

@@ -119,10 +119,4 @@ describe("readLock", () => {
     expect(Object.keys(l.envs).sort()).toEqual(["dev", "prod"]);
     expect(l.envs.dev!.wabaId).toBe("2142644013223594");
   });
-
-  it("throws an upgrade hint on a legacy v1 lockfile", async () => {
-    await expect(readLock(at("fixtures/legacy-lock-app"))).rejects.toThrow(
-      /v1 lockfile[\s\S]*Upgrade it by hand/,
-    );
-  });
 });

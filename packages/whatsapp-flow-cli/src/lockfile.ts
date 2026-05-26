@@ -1,4 +1,3 @@
-import { FlowCompileError } from "whatsapp-flow-core";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
@@ -40,12 +39,6 @@ export function lockPath(flowsDir: string): string {
   return path.join(flowsDir, LOCK_NAME);
 }
 
-/** True when a parsed lockfile object is in the legacy v1 (WABA-keyed) shape. */
-export function isLegacyLock(raw: unknown): boolean {
-  const obj = raw as { version?: number; envs?: unknown; wabas?: unknown };
-  return !!obj && (obj.version === 1 || (obj.wabas !== undefined && obj.envs === undefined));
-}
-
 export async function readLock(flowsDir: string): Promise<Lockfile> {
   const p = lockPath(flowsDir);
   if (!existsSync(p)) return { version: LOCK_VERSION, envs: {} };
@@ -54,15 +47,6 @@ export async function readLock(flowsDir: string): Promise<Lockfile> {
     raw = JSON.parse(await readFile(p, "utf8"));
   } catch {
     return { version: LOCK_VERSION, envs: {} };
-  }
-  if (isLegacyLock(raw)) {
-    throw new FlowCompileError(
-      "flows.lock.json is a v1 lockfile (keyed by raw WABA id). Upgrade it by hand: set " +
-        '"version": 2 and replace the top-level "wabas" map with an "envs" map, moving each ' +
-        "WABA id under the env name that targets it — " +
-        '`"envs": { "<env>": { "wabaId": "<id>", "assets": { …the old per-WABA map… } } }`. ' +
-        "See the README (Lockfile migration) for a before/after example.",
-    );
   }
   const parsed = raw as Lockfile;
   if (!parsed.envs) parsed.envs = {};

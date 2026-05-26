@@ -99,10 +99,147 @@ function PhoneButton(props: PhoneButtonProps): AuthoringNode {
   return node("PhoneButton", { text: props.text, phoneNumber: props.phoneNumber });
 }
 
+// --- Additional button types -----------------------------------------------
+
+export interface FlowButtonProps {
+  /** Button label. */
+  text: string;
+  /** Reference a Flow authored in THIS app by name; `flows push` resolves its
+   * per-env flow id. Provide exactly one of `flowName` or `flowId`. */
+  flowName?: string;
+  /** Raw Meta flow id — escape hatch for a flow not authored in this app. */
+  flowId?: string;
+  /** "navigate" (default) opens a screen in the flow; "data_exchange" posts to
+   * your endpoint for the first screen. */
+  flowAction?: "navigate" | "data_exchange";
+  /** First screen id to open. Required when `flowAction` is "navigate". */
+  navigateScreen?: string;
+}
+function FlowButton(props: FlowButtonProps): AuthoringNode {
+  return node("FlowButton", {
+    text: props.text,
+    flowName: props.flowName,
+    flowId: props.flowId,
+    flowAction: props.flowAction,
+    navigateScreen: props.navigateScreen,
+  });
+}
+
+export interface CopyCodeButtonProps {
+  /** Example coupon code Meta shows reviewers (the live code is sent at
+   * send-time as a button parameter). Max 15 characters. */
+  code: string;
+}
+function CopyCodeButton(props: CopyCodeButtonProps): AuthoringNode {
+  return node("CopyCodeButton", { code: props.code });
+}
+
+export interface CatalogButtonProps {
+  /** CATALOG label is fixed by WhatsApp to "View catalog" — no props needed. */
+  text?: never;
+}
+function CatalogButton(_props?: CatalogButtonProps): AuthoringNode {
+  return node("CatalogButton", {});
+}
+
+export interface OptOutButtonProps {
+  /** Button label. Defaults to "Stop promotions". */
+  text?: string;
+}
+function OptOutButton(props: OptOutButtonProps = {}): AuthoringNode {
+  return node("OptOutButton", { text: props.text });
+}
+
+export interface OtpCopyCodeButtonProps {
+  /** Button label. Defaults to WhatsApp's "Copy code". */
+  text?: string;
+}
+function OtpCopyCodeButton(props: OtpCopyCodeButtonProps = {}): AuthoringNode {
+  return node("OtpCopyCodeButton", { text: props.text });
+}
+
+export interface OtpOneTapButtonProps {
+  /** Button label. Defaults to WhatsApp's "Copy code". */
+  text?: string;
+  /** Autofill button label (Android). */
+  autofillText?: string;
+  /** Your Android app package name (required for one-tap autofill). */
+  packageName: string;
+  /** Your app's signing-key signature hash (required for one-tap autofill). */
+  signatureHash: string;
+}
+function OtpOneTapButton(props: OtpOneTapButtonProps): AuthoringNode {
+  return node("OtpOneTapButton", {
+    text: props.text,
+    autofillText: props.autofillText,
+    packageName: props.packageName,
+    signatureHash: props.signatureHash,
+  });
+}
+
+export interface OtpZeroTapButtonProps extends OtpOneTapButtonProps {
+  /** Confirms you've accepted Meta's zero-tap terms. Defaults to true. */
+  zeroTapTermsAccepted?: boolean;
+}
+function OtpZeroTapButton(props: OtpZeroTapButtonProps): AuthoringNode {
+  return node("OtpZeroTapButton", {
+    text: props.text,
+    autofillText: props.autofillText,
+    packageName: props.packageName,
+    signatureHash: props.signatureHash,
+    zeroTapTermsAccepted: props.zeroTapTermsAccepted,
+  });
+}
+
+// --- Not implemented yet (exposed for discoverability) ---------------------
+// These compile to a clear "not implemented yet" error. They exist so the full
+// Meta button surface is visible via autocomplete and TypeScript before the
+// implementation lands.
+
+export interface MultiProductButtonProps {
+  /** Button label. */
+  text?: string;
+}
+/** Not implemented yet. Multi-product message (MPM) button. Exposed so you can
+ * see the full button surface; compiling it fails with a clear error. */
+function MultiProductButton(props: MultiProductButtonProps = {}): AuthoringNode {
+  return node("MultiProductButton", { text: props.text });
+}
+
+export interface VoiceCallButtonProps {
+  /** Button label. */
+  text?: string;
+}
+/** Not implemented yet. Voice-call button. Exposed so you can see the full
+ * button surface; compiling it fails with a clear error. */
+function VoiceCallButton(props: VoiceCallButtonProps = {}): AuthoringNode {
+  return node("VoiceCallButton", { text: props.text });
+}
+
+export interface AppButtonProps {
+  /** Button label. */
+  text?: string;
+  /** Deep-link / web URL the app button opens. */
+  url?: string;
+  /** Android app package name. */
+  packageName?: string;
+  /** App signing-key signature hash. */
+  signatureHash?: string;
+}
+/** Not implemented yet. App / deep-link button. Exposed so you can see the full
+ * button surface; compiling it fails with a clear error. */
+function AppButton(props: AppButtonProps = {}): AuthoringNode {
+  return node("AppButton", {
+    text: props.text,
+    url: props.url,
+    packageName: props.packageName,
+    signatureHash: props.signatureHash,
+  });
+}
+
 /** Root of a message template. Compose its parts as namespaced children:
  * `<Template.Header>`, `<Template.Body>`, `<Template.Footer>`,
- * `<Template.Buttons>` (with `<Template.URL>` / `<Template.Reply>` /
- * `<Template.Phone>` inside). Only Body is required. */
+ * `<Template.Buttons>` (with button children inside). Only Body is required. */
 export const Template = Object.assign(TemplateRoot, {
   Header,
   Body,
@@ -114,4 +251,25 @@ export const Template = Object.assign(TemplateRoot, {
   Reply: QuickReply,
   /** Call-to-action button that dials a phone number. */
   Phone: PhoneButton,
+  /** Button that opens a WhatsApp Flow. Reference a flow in this app by
+   * `flowName` (id resolved at push) or pass a raw `flowId`. */
+  Flow: FlowButton,
+  /** Copy-code button for a coupon/offer code. */
+  CopyCode: CopyCodeButton,
+  /** "View catalog" button (catalog templates). */
+  Catalog: CatalogButton,
+  /** Marketing opt-out (unsubscribe) quick reply. */
+  OptOut: OptOutButton,
+  /** Authentication OTP button — copy-code variant. */
+  OtpCopyCode: OtpCopyCodeButton,
+  /** Authentication OTP button — one-tap autofill (Android). */
+  OtpOneTap: OtpOneTapButton,
+  /** Authentication OTP button — zero-tap. */
+  OtpZeroTap: OtpZeroTapButton,
+  /** Not implemented yet — multi-product (MPM) button. */
+  MultiProduct: MultiProductButton,
+  /** Not implemented yet — voice-call button. */
+  VoiceCall: VoiceCallButton,
+  /** Not implemented yet — app / deep-link button. */
+  App: AppButton,
 });

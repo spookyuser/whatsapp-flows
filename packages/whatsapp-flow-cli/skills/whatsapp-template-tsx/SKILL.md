@@ -41,7 +41,8 @@ export default defineFlowsApp({
 
 Declare named environments under `wabas`; select one with `--env <name>`,
 `WHATSAPP_ENV`, or `defaultEnv`. See the `whatsapp-flow-tsx` skill for the full
-dev/prod workflow and token config.
+dev/prod workflow and token config. Upgrading an older project (single `waba`,
+`namePrefix`, or a WABA-keyed lockfile)? Use the **`whatsapp-flows-migration`** skill.
 
 ## A template is a file
 
@@ -94,6 +95,19 @@ components (which also have a `Footer`, `Image`, etc.). Compose them as children
 | `<Template.URL text url>` | `URL` button | `url` is a string or a `tpl` with one trailing variable. |
 | `<Template.Reply>` | `QUICK_REPLY` button | Label from `text` prop or children. |
 | `<Template.Phone text phoneNumber>` | `PHONE_NUMBER` button | Static phone number. |
+| `<Template.Flow text flowName\|flowId …>` | `FLOW` button | **Launches a Flow (form).** `flowName` references a flow in this app (id resolved per-env at push); `flowId` is a raw escape hatch. `navigateScreen` required for the default `flowAction="navigate"`. |
+| `<Template.CopyCode code>` | `COPY_CODE` button | Coupon/offer code; `code` is the example (≤ 15 chars). |
+| `<Template.Catalog />` | `CATALOG` button | Fixed "View catalog" label; no props. |
+| `<Template.OptOut text?>` | `MARKETING_OPT_OUT` | Marketing unsubscribe; `text` defaults to "Stop promotions". |
+| `<Template.OtpCopyCode / OtpOneTap / OtpZeroTap>` | `OTP` button | Authentication OTP (`otp_type` COPY_CODE/ONE_TAP/ZERO_TAP). One/zero-tap need `packageName` + `signatureHash`. Emits the button only — author the rest of the auth template. |
+
+**Exposed but not implemented yet** (fail the compile with a clear error, so the
+full surface is discoverable without shipping a wrong shape): `Template.MultiProduct`
+(`MPM`), `Template.VoiceCall` (`VOICE_CALL`), `Template.App` (`APP`).
+
+A `FLOW` button is how you put a **form** in a template; the CLI mirrors it by
+resolving the per-env flow id from the same app at push time. See
+[references/templates.md](references/templates.md#flow-buttons-forms-in-a-template).
 
 Source order doesn't matter — the compiler emits Meta's order (HEADER, BODY, FOOTER,
 BUTTONS).

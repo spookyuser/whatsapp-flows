@@ -7,6 +7,7 @@ import {
   compileTemplateFile,
   isTemplateModule,
   renderTemplatePreview,
+  resolveTemplateFlowRefs,
 } from "./compile-template.ts";
 import { buildAllEnvIdMaps, renderModule } from "./ids.ts";
 import { hashJson, type Lockfile, readLock, writeLock } from "./lockfile.ts";
@@ -208,6 +209,7 @@ export async function pushProject(flowsDir?: string, opts: PushOptions = {}): Pr
 
   for (const tpl of templates) {
     const key = `tpl:${tpl.name}@${tpl.language}`;
+    resolveTemplateFlowRefs(tpl, assets, { dryRun: opts.dryRun });
     const hash = hashJson(tpl.payload);
     const entry = assets[key];
     const unchanged = !!entry && entry.hash === hash;

@@ -5,8 +5,11 @@ export {
   type FlowConfig,
   defineFlowsApp,
   type FlowsAppConfig,
-  type WabaConfig,
+  type EnvConfig,
+  type TokenContext,
+  type TokenResolver,
 } from "./define-flow.ts";
+export { fromCommand } from "./token.ts";
 export { defineTemplate, type TemplateConfig, type TemplateCategory } from "./define-template.ts";
 export {
   Template,
@@ -21,6 +24,16 @@ export {
   type URLButtonProps,
   type QuickReplyProps,
   type PhoneButtonProps,
+  type FlowButtonProps,
+  type CopyCodeButtonProps,
+  type CatalogButtonProps,
+  type OptOutButtonProps,
+  type OtpCopyCodeButtonProps,
+  type OtpOneTapButtonProps,
+  type OtpZeroTapButtonProps,
+  type MultiProductButtonProps,
+  type VoiceCallButtonProps,
+  type AppButtonProps,
 } from "./template.ts";
 export type { ScreenComponent } from "./screen.ts";
 

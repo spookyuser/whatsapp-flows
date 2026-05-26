@@ -1,0 +1,41 @@
+{
+  "version": 2,
+  "envs": {
+    "dev": {
+      "wabaId": "2142644013223594",
+      "assets": {
+        "woolworths_connect": {
+          "id": "4436671666579089",
+          "rev": 3,
+          "hash": "a1b2c3d4e5f60718",
+          "kind": "flow"
+        },
+        "tpl:pelicart_setup_account@en_US": {
+          "id": "1008053371673030",
+          "rev": 1,
+          "hash": "0f1e2d3c4b5a6978",
+          "kind": "template",
+          "status": "APPROVED"
+        }
+      }
+    },
+    "prod": {
+      "wabaId": "26870122239247230",
+      "assets": {
+        "woolworths_connect": {
+          "id": "2084824509097488",
+          "rev": 2,
+          "hash": "11223344556677ff",
+          "kind": "flow"
+        },
+        "tpl:pelicart_setup_account@en_US": {
+          "id": "2473419473096101",
+          "rev": 1,
+          "hash": "ffeeddccbbaa0099",
+          "kind": "template",
+          "status": "APPROVED"
+        }
+      }
+    }
+  }
+}

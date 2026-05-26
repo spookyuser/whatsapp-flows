@@ -10,18 +10,6 @@ export interface MetaFlow {
   status?: string;
 }
 
-/** Resolve the Graph API access token from WHATSAPP_ACCESS_TOKEN. */
-export function getToken(): string {
-  const token = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
-  if (!token) {
-    throw new FlowCompileError(
-      "WHATSAPP_ACCESS_TOKEN is not set. Export it, or run via your env loader, e.g.\n" +
-        "  dotenvx run -f .env.local -- pnpm flows push",
-    );
-  }
-  return token;
-}
-
 interface GraphOptions {
   method?: string;
   query?: Record<string, string | undefined>;
@@ -47,7 +35,9 @@ async function graph(apiPath: string, token: string, options: GraphOptions = {})
   const text = await response.text();
   const data = text ? JSON.parse(text) : {};
   if (!response.ok) {
-    throw new FlowCompileError(formatMetaError(options.method ?? "GET", url, response.status, data));
+    throw new FlowCompileError(
+      formatMetaError(options.method ?? "GET", url, response.status, data),
+    );
   }
   return data;
 }
@@ -155,6 +145,21 @@ export interface MetaTemplate {
   language?: string;
   status?: string;
   category?: string;
+}
+
+/** List every live message template on a WABA, following Meta's paging cursors
+ * (a WABA can hold more than one page of templates). */
+export async function listTemplates(wabaId: string, token: string): Promise<MetaTemplate[]> {
+  const all: MetaTemplate[] = [];
+  let after: string | undefined;
+  do {
+    const data = (await graph(`${wabaId}/message_templates`, token, {
+      query: { fields: "id,name,language,status,category", limit: "200", after },
+    })) as { data?: MetaTemplate[]; paging?: { next?: string; cursors?: { after?: string } } };
+    all.push(...(data.data ?? []));
+    after = data.paging?.next ? data.paging.cursors?.after : undefined;
+  } while (after);
+  return all;
 }
 
 /** Find a template by exact name + language on a WABA, or null. */

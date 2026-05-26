@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "wabas": {
+    "2142644013223594": {
+      "woolworths_connect": {
+        "id": "4436671666579089",
+        "rev": 3,
+        "hash": "a1b2c3d4e5f60718",
+        "kind": "flow"
+      }
+    },
+    "26870122239247230": {
+      "woolworths_connect": {
+        "id": "2084824509097488",
+        "rev": 2,
+        "hash": "11223344556677ff",
+        "kind": "flow"
+      }
+    }
+  }
+}

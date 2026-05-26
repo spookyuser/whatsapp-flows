@@ -16,9 +16,22 @@ export interface CompiledTemplate {
   payload: Record<string, unknown>;
   /** Absolute path to the source .tsx file. */
   file: string;
+  /** FLOW buttons that reference a flow in this app by name; their `flow_id` is
+   * filled per-env at push time (see `resolveTemplateFlowRefs`). Empty when no
+   * `<Template.Flow flowName=…>` is used. */
+  flowRefs: FlowRef[];
+}
+
+/** An unresolved FLOW-button → in-app flow reference. `button` points into the
+ * compiled `components`/`payload`, so setting `button.flow_id` resolves it. */
+export interface FlowRef {
+  button: TemplateComponent;
+  flowName: string;
 }
 
 type TemplateComponent = Record<string, unknown>;
+
+const ISSUES_URL = "https://github.com/spookyuser/whatsapp-flows/issues";
 
 const CATEGORIES = new Set<TemplateCategory>(["MARKETING", "UTILITY", "AUTHENTICATION"]);
 const NAME_RE = /^[a-z0-9_]+$/;
@@ -36,7 +49,7 @@ export function isTemplateModule(mod: Record<string, unknown>): boolean {
  * per component, and their examples are gathered into the shape Meta requires. */
 export async function compileTemplateFile(
   file: string,
-  app: FlowsAppConfig = {},
+  app: Pick<FlowsAppConfig, "language"> = {},
   preloaded?: Record<string, unknown>,
 ): Promise<CompiledTemplate> {
   const mod = preloaded ?? (await loadModule(file));
@@ -66,11 +79,14 @@ export async function compileTemplateFile(
   const root = renderRoot(mod, base, name);
   const { header, body, footer, buttons } = collectSections(root.children, name);
 
+  const flowRefs: FlowRef[] = [];
   const components: TemplateComponent[] = [];
   if (header) components.push(buildHeader(header, name));
   components.push(buildBody(body, name));
   if (footer) components.push(buildFooter(footer, name));
-  if (buttons) components.push(buildButtons(buttons, name));
+  if (buttons) components.push(buildButtons(buttons, name, flowRefs));
+
+  warnMissingOptOut(category, components, name);
 
   const payload: Record<string, unknown> = {
     name,
@@ -80,7 +96,48 @@ export async function compileTemplateFile(
     components,
   };
 
-  return { name, language, category, allowCategoryChange, components, payload, file };
+  return { name, language, category, allowCategoryChange, components, payload, file, flowRefs };
+}
+
+/** Warn when a MARKETING template has no opt-out button: Meta may auto-inject
+ * one, so authors who want to control its placement should add `Template.OptOut`. */
+function warnMissingOptOut(
+  category: TemplateCategory,
+  components: TemplateComponent[],
+  name: string,
+): void {
+  if (category !== "MARKETING") return;
+  const buttons = components.find((c) => c.type === "BUTTONS")?.buttons as
+    | TemplateComponent[]
+    | undefined;
+  if (buttons?.some((b) => b.type === "MARKETING_OPT_OUT")) return;
+  console.warn(
+    `⚠ Template "${name}" is MARKETING and has no <Template.OptOut>. Meta may auto-inject an ` +
+      "opt-out button; add <Template.OptOut> inside <Template.Buttons> to control its placement.",
+  );
+}
+
+/** Fill each FLOW button that references an in-app flow by name with the flow's
+ * per-env id (from the lockfile's resolved asset map). Mutates the compiled
+ * button objects in place. In a dry run, an unresolved name is left unfilled;
+ * otherwise it's a hard error (the referenced flow isn't part of this app). */
+export function resolveTemplateFlowRefs(
+  tpl: CompiledTemplate,
+  flowIdByName: Record<string, { id: string } | undefined>,
+  opts: { dryRun?: boolean } = {},
+): void {
+  for (const ref of tpl.flowRefs) {
+    const id = flowIdByName[ref.flowName]?.id;
+    if (id) {
+      ref.button.flow_id = id;
+    } else if (!opts.dryRun) {
+      throw new FlowCompileError(
+        `Template "${tpl.name}" references flow "${ref.flowName}" via ` +
+          `<Template.Flow flowName="${ref.flowName}">, but this app has no flow named ` +
+          `"${ref.flowName}". Add that flow to the app, or pass a raw flowId for an external flow.`,
+      );
+    }
+  }
 }
 
 // --- structure -------------------------------------------------------------
@@ -202,7 +259,7 @@ function buildFooter(n: AuthoringNode, name: string): TemplateComponent {
   return { type: "FOOTER", text };
 }
 
-function buildButtons(n: AuthoringNode, name: string): TemplateComponent {
+function buildButtons(n: AuthoringNode, name: string, flowRefs: FlowRef[]): TemplateComponent {
   const buttonNodes = n.children.filter((c) => c.component !== "#text");
   if (buttonNodes.length === 0) {
     throw new FlowCompileError(`<Template.Buttons> in "${name}" has no buttons.`);
@@ -212,10 +269,21 @@ function buildButtons(n: AuthoringNode, name: string): TemplateComponent {
       `Template "${name}" has ${buttonNodes.length} buttons; Meta allows at most 10.`,
     );
   }
-  return { type: "BUTTONS", buttons: buttonNodes.map((b) => buildButton(b, name)) };
+  return { type: "BUTTONS", buttons: buttonNodes.map((b) => buildButton(b, name, flowRefs)) };
 }
 
-function buildButton(b: AuthoringNode, name: string): TemplateComponent {
+/** Throw the uniform "not implemented yet" error for a stubbed button. The
+ * component is exposed for discoverability but compiling it fails. */
+function notImplemented(display: string, metaType: string): never {
+  throw new FlowCompileError(
+    `${display} is not implemented yet. The component is exposed so you can see the full ` +
+      "button surface, but compiling it fails. Use <Template.URL> / a different button while " +
+      `you wait, or open an issue at ${ISSUES_URL} to bump priority. ` +
+      `(Underlying Meta type: ${metaType}.)`,
+  );
+}
+
+function buildButton(b: AuthoringNode, name: string, flowRefs: FlowRef[]): TemplateComponent {
   switch (b.component) {
     case "QuickReply": {
       const text = (b.props.text as string | undefined) ?? textOf(b);
@@ -238,9 +306,89 @@ function buildButton(b: AuthoringNode, name: string): TemplateComponent {
       }
       return { type: "PHONE_NUMBER", text, phone_number: phone };
     }
+    case "FlowButton": {
+      const text = b.props.text as string;
+      if (!text) throw new FlowCompileError(`A flow button in "${name}" needs text.`);
+      const flowName = b.props.flowName as string | undefined;
+      const flowId = b.props.flowId as string | undefined;
+      if (!flowName === !flowId) {
+        throw new FlowCompileError(
+          `A flow button in "${name}" needs exactly one of flowName (a flow in this app) or ` +
+            "flowId (a raw Meta flow id).",
+        );
+      }
+      const flowAction = (b.props.flowAction as string | undefined) ?? "navigate";
+      const navigateScreen = b.props.navigateScreen as string | undefined;
+      if (flowAction === "navigate" && !navigateScreen) {
+        throw new FlowCompileError(
+          `A flow button in "${name}" with flowAction "navigate" needs a navigateScreen ` +
+            "(the id of the first screen to open).",
+        );
+      }
+      const comp: TemplateComponent = { type: "FLOW", text, flow_action: flowAction };
+      if (navigateScreen) comp.navigate_screen = navigateScreen;
+      if (flowId) comp.flow_id = flowId;
+      else flowRefs.push({ button: comp, flowName: flowName! });
+      return comp;
+    }
+    case "CopyCodeButton": {
+      const code = b.props.code as string | undefined;
+      if (!code) {
+        throw new FlowCompileError(
+          `A copy-code button in "${name}" needs a code (the example coupon code).`,
+        );
+      }
+      return { type: "COPY_CODE", example: code };
+    }
+    case "CatalogButton":
+      return { type: "CATALOG", text: "View catalog" };
+    case "OptOutButton": {
+      const text = (b.props.text as string | undefined) ?? "Stop promotions";
+      return { type: "MARKETING_OPT_OUT", text };
+    }
+    case "OtpCopyCodeButton": {
+      const comp: TemplateComponent = { type: "OTP", otp_type: "COPY_CODE" };
+      const text = b.props.text as string | undefined;
+      if (text) comp.text = text;
+      return comp;
+    }
+    case "OtpOneTapButton":
+    case "OtpZeroTapButton": {
+      const oneTap = b.component === "OtpOneTapButton";
+      const otpType = oneTap ? "ONE_TAP" : "ZERO_TAP";
+      const packageName = b.props.packageName as string | undefined;
+      const signatureHash = b.props.signatureHash as string | undefined;
+      if (!packageName || !signatureHash) {
+        throw new FlowCompileError(
+          `A ${oneTap ? "one-tap" : "zero-tap"} OTP button in "${name}" needs packageName and ` +
+            "signatureHash.",
+        );
+      }
+      const comp: TemplateComponent = {
+        type: "OTP",
+        otp_type: otpType,
+        package_name: packageName,
+        signature_hash: signatureHash,
+      };
+      const text = b.props.text as string | undefined;
+      const autofill = b.props.autofillText as string | undefined;
+      if (text) comp.text = text;
+      if (autofill) comp.autofill_text = autofill;
+      if (!oneTap) {
+        comp.zero_tap_terms_accepted =
+          (b.props.zeroTapTermsAccepted as boolean | undefined) ?? true;
+      }
+      return comp;
+    }
+    case "MultiProductButton":
+      return notImplemented("Template.MultiProduct", "MPM");
+    case "VoiceCallButton":
+      return notImplemented("Template.VoiceCall", "VOICE_CALL");
+    case "AppButton":
+      return notImplemented("Template.App", "APP");
     default:
       throw new FlowCompileError(
-        `Unsupported button <${b.component}> in "${name}". Use Template.URL, Template.Reply, or Template.Phone.`,
+        `Unsupported button <${b.component}> in "${name}". See Template.* for the available buttons.`,
       );
   }
 }
@@ -378,6 +526,16 @@ function describeButton(b: TemplateComponent): string {
       return `REPLY "${String(b.text)}"`;
     case "PHONE_NUMBER":
       return `PHONE "${String(b.text)}" → ${String(b.phone_number)}`;
+    case "FLOW":
+      return `FLOW "${String(b.text)}" → ${b.flow_id ? `flow ${String(b.flow_id)}` : "(flow id resolved at push)"}`;
+    case "COPY_CODE":
+      return `COPY_CODE (e.g. "${String(b.example)}")`;
+    case "CATALOG":
+      return 'CATALOG "View catalog"';
+    case "MARKETING_OPT_OUT":
+      return `OPT_OUT "${String(b.text)}"`;
+    case "OTP":
+      return `OTP ${String(b.otp_type)}${b.text ? ` "${String(b.text)}"` : ""}`;
     default:
       return String(b.type);
   }

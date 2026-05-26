@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { compileTemplateFile, isTemplateModule } from "../src/compile-template.ts";
+import { Template } from "whatsapp-flow-tsx";
+import {
+  type CompiledTemplate,
+  compileTemplateFile,
+  isTemplateModule,
+  resolveTemplateFlowRefs,
+} from "../src/compile-template.ts";
 import { hashJson } from "../src/lockfile.ts";
 import { loadModule } from "../src/load-module.ts";
 import { loadProject } from "../src/project.ts";
@@ -110,4 +116,130 @@ describe("template validation", () => {
 
   it("rejects a template without a body", () =>
     expectReject("fixtures/template-errors/no-body.tsx", /exactly one <Template\.Body>/i));
+
+  it("rejects a navigate flow button without a screen", () =>
+    expectReject("fixtures/template-errors/flow-no-screen.tsx", /needs a navigateScreen/i));
+
+  it("rejects a flow button with both flowName and flowId", () =>
+    expectReject("fixtures/template-errors/flow-both-refs.tsx", /exactly one of flowName/i));
+});
+
+describe("template button surface", () => {
+  it("exposes every documented button under the Template namespace", () => {
+    // Implemented + stubbed. Removing any of these should fail this test.
+    for (const name of [
+      "URL",
+      "Reply",
+      "Phone",
+      "Flow",
+      "CopyCode",
+      "Catalog",
+      "OptOut",
+      "OtpCopyCode",
+      "OtpOneTap",
+      "OtpZeroTap",
+      "MultiProduct",
+      "VoiceCall",
+      "App",
+    ] as const) {
+      expect(typeof Template[name]).toBe("function");
+    }
+  });
+});
+
+describe("template buttons", () => {
+  const buttonsOf = (t: { components: Comp[] }): Comp[] => byType(t, "BUTTONS").buttons as Comp[];
+
+  it("compiles copy-code, URL, and opt-out buttons", async () => {
+    const t = await compileTemplateFile(at("fixtures/template-buttons/buttons.tsx"), app);
+    expect(buttonsOf(t)).toEqual([
+      { type: "COPY_CODE", example: "SAVE10" },
+      { type: "URL", text: "Shop now", url: "https://acme.com/shop" },
+      { type: "MARKETING_OPT_OUT", text: "Stop promotions" },
+    ]);
+  });
+
+  it("compiles a catalog button with its fixed label", async () => {
+    const t = await compileTemplateFile(at("fixtures/template-buttons/catalog.tsx"), app);
+    expect(buttonsOf(t)).toEqual([
+      { type: "CATALOG", text: "View catalog" },
+      { type: "MARKETING_OPT_OUT", text: "No thanks" },
+    ]);
+  });
+
+  it("compiles a flow button with a raw flow id", async () => {
+    const t = await compileTemplateFile(at("fixtures/template-buttons/flow-id.tsx"), app);
+    expect(buttonsOf(t)).toEqual([
+      {
+        type: "FLOW",
+        text: "Book now",
+        flow_action: "navigate",
+        navigate_screen: "WELCOME",
+        flow_id: "123456789",
+      },
+    ]);
+    expect(t.flowRefs).toEqual([]);
+  });
+
+  it("defers a flow button referenced by name to push-time id resolution", async () => {
+    const t = await compileTemplateFile(at("fixtures/template-buttons/flow-name.tsx"), app);
+    const button = buttonsOf(t)[0]!;
+    expect(button).toEqual({
+      type: "FLOW",
+      text: "Start survey",
+      flow_action: "navigate",
+      navigate_screen: "WELCOME",
+    });
+    expect(button.flow_id).toBeUndefined();
+    expect(t.flowRefs).toEqual([{ button, flowName: "survey" }]);
+  });
+
+  it("compiles a one-tap OTP button payload", async () => {
+    const t = await compileTemplateFile(at("fixtures/template-buttons/otp.tsx"), app);
+    expect(buttonsOf(t)).toEqual([
+      {
+        type: "OTP",
+        otp_type: "ONE_TAP",
+        package_name: "com.acme.app",
+        signature_hash: "K8a83b2c1d",
+      },
+    ]);
+  });
+
+  it("fails to compile stubbed buttons with a uniform 'not implemented' error", async () => {
+    for (const [file, type] of [
+      ["fixtures/template-buttons/stub-mpm.tsx", "MPM"],
+      ["fixtures/template-buttons/stub-voicecall.tsx", "VOICE_CALL"],
+      ["fixtures/template-buttons/stub-app.tsx", "APP"],
+    ] as const) {
+      await expect(compileTemplateFile(at(file), app)).rejects.toThrow(
+        new RegExp(`not implemented yet[\\s\\S]*Underlying Meta type: ${type}`, "i"),
+      );
+    }
+  });
+});
+
+describe("resolveTemplateFlowRefs", () => {
+  const make = (flowName: string): { tpl: CompiledTemplate; button: Comp } => {
+    const button: Comp = { type: "FLOW", text: "x", flow_action: "navigate" };
+    const tpl = { name: "t", flowRefs: [{ button, flowName }] } as unknown as CompiledTemplate;
+    return { tpl, button };
+  };
+
+  it("fills flow_id from the resolved per-env flow asset map", () => {
+    const { tpl, button } = make("survey");
+    resolveTemplateFlowRefs(tpl, { survey: { id: "999" } });
+    expect(button.flow_id).toBe("999");
+  });
+
+  it("throws when a referenced flow isn't in the app", () => {
+    const { tpl } = make("missing");
+    expect(() => resolveTemplateFlowRefs(tpl, {})).toThrow(/has no flow named "missing"/i);
+  });
+
+  it("leaves the id unresolved in a dry run", () => {
+    const { tpl, button } = make("missing");
+    resolveTemplateFlowRefs(tpl, {}, { dryRun: true });
+    expect(button.flow_id).toBeUndefined();
+  });
 });

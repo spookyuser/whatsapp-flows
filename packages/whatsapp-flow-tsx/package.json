@@ -17,9 +17,10 @@
     "./jsx-dev-runtime": {
       "types": "./dist/jsx-runtime.d.ts",
       "import": "./dist/jsx-runtime.js"
-    }
+    },
+    "./tsconfig": "./tsconfig.preset.json"
   },
-  "files": ["dist"],
+  "files": ["dist", "tsconfig.preset.json"],
   "scripts": {
     "build": "tsup src/index.ts src/jsx-runtime.ts --format esm --dts --clean",
     "typecheck": "tsc --noEmit",

@@ -56,9 +56,52 @@ children of `<Template>`:
 | `<Template.URL text url>` | `URL` button | `url` is a string or a `tpl` with one trailing variable. |
 | `<Template.Reply>` | `QUICK_REPLY` button | Label from `text` prop or children. |
 | `<Template.Phone text phoneNumber>` | `PHONE_NUMBER` button | Static phone number. |
+| `<Template.Flow text flowName\|flowId …>` | `FLOW` button | Opens a Flow (a form). See [Flow buttons](#flow-buttons-forms-in-a-template). |
+| `<Template.CopyCode code>` | `COPY_CODE` button | Copy a coupon/offer code. `code` is the example (≤ 15 chars); label is fixed by WhatsApp. |
+| `<Template.Catalog />` | `CATALOG` button | "View catalog". No props — label is fixed by WhatsApp. |
+| `<Template.OptOut text?>` | `MARKETING_OPT_OUT` button | Marketing unsubscribe. `text` defaults to "Stop promotions". |
+| `<Template.OtpCopyCode text?>` | `OTP` (`otp_type: COPY_CODE`) | Authentication OTP. See [OTP buttons](#otp-buttons-authentication). |
+| `<Template.OtpOneTap packageName signatureHash …>` | `OTP` (`otp_type: ONE_TAP`) | One-tap autofill (Android). |
+| `<Template.OtpZeroTap packageName signatureHash …>` | `OTP` (`otp_type: ZERO_TAP`) | Zero-tap (sets `zero_tap_terms_accepted`). |
+
+**Not implemented yet** (exposed for discoverability — they appear in
+autocomplete but **fail the compile** with a clear error so you don't silently
+ship a wrong shape): `Template.MultiProduct` (`MPM`), `Template.VoiceCall`
+(`VOICE_CALL`), `Template.App` (`APP`). Use a different button until they land.
 
 Only `Template.Body` is required. Order of the sections in the source doesn't
 matter — the compiler emits them in Meta's order (HEADER, BODY, FOOTER, BUTTONS).
+
+### Flow buttons (forms in a template)
+
+A `FLOW` button launches a WhatsApp Flow (an interactive form) from the
+template. Reference a Flow **authored in the same app** by name and the CLI
+resolves its **per-env flow id at `flows push`** time (flow ids differ per WABA);
+or pass a raw `flowId` for a flow that isn't in this app:
+
+```tsx
+// References the "survey" flow in this app — id filled per-env at push.
+<Template.Flow text="Start survey" flowName="survey" navigateScreen="WELCOME" />
+// Raw id escape hatch for an external flow.
+<Template.Flow text="Book" flowId="123456789" navigateScreen="WELCOME" />
+```
+
+- Provide **exactly one** of `flowName` / `flowId`.
+- `flowAction` is `"navigate"` (default) or `"data_exchange"`. With `"navigate"`,
+  `navigateScreen` (the first screen id) is **required**.
+- A `flowName` is resolved against the flows in this app; if no such flow exists,
+  `push` fails. `build`/`inspect` show the button without an id (it's a push-time
+  concern). In `--dry-run`, a newly-created flow's id may not be known yet, so the
+  id is left unfilled in the preview.
+
+### OTP buttons (authentication)
+
+`Template.OtpCopyCode` / `OtpOneTap` / `OtpZeroTap` emit the OTP **button**
+payload (`{ type: "OTP", otp_type: … }`). This layer does **not** model the rest
+of Meta's authentication-template structure (auto-generated body,
+`add_security_recommendation`, `code_expiration_minutes`) — author the body and
+let Meta validate, as before. `OtpOneTap`/`OtpZeroTap` require `packageName` and
+`signatureHash`.
 
 ## Variables and examples
 
@@ -148,10 +191,12 @@ Graph API resumable upload session (`/app/uploads` → upload → `file_handle`)
 
 ## Authentication templates
 
-`category: "AUTHENTICATION"` is accepted, but Meta requires a specific structure
-(OTP button, security disclaimers) that this layer does not special-case. Author the
-body/buttons as usual and let Meta validate, or build the authentication-specific
-payload shape directly against the Graph API.
+`category: "AUTHENTICATION"` is accepted. Use the OTP button components
+(`Template.OtpCopyCode` / `OtpOneTap` / `OtpZeroTap`) for the button itself, but
+note that Meta requires a specific surrounding structure (auto-generated body,
+security disclaimers, `code_expiration_minutes`) that this layer does **not**
+model. Author the body/buttons as usual and let Meta validate, or build the
+authentication-specific payload shape directly against the Graph API.
 
 ## Push behavior
 
@@ -180,10 +225,17 @@ env file, not by passing a flag.
 - Header: at most one variable.
 - Footer: no variables (static text only).
 - URL button: at most one variable, at the end of the URL.
+- Flow button: exactly one of `flowName` / `flowId`; `navigateScreen` required when
+  `flowAction` is `"navigate"`.
+- Copy-code button needs a `code`; one-tap/zero-tap OTP need `packageName` + `signatureHash`.
+- `Template.MultiProduct` / `VoiceCall` / `App` are exposed but **not implemented** —
+  compiling them fails with a clear error.
 - Every variable needs a non-empty example.
 - Name must be lowercase letters, numbers, and underscores (`[a-z0-9_]+`).
 - `category` ∈ {MARKETING, UTILITY, AUTHENTICATION}.
 - ≤ 10 buttons.
+- MARKETING templates without a `Template.OptOut` get a build **warning** (Meta may
+  auto-inject an opt-out button; add `Template.OptOut` to control its placement).
 
 ## Sharp edges (Meta behavior)
 

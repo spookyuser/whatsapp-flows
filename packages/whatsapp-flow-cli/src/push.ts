@@ -7,9 +7,10 @@ import {
   compileTemplateFile,
   isTemplateModule,
   renderTemplatePreview,
+  resolveTemplateFlowRefs,
 } from "./compile-template.ts";
-import { buildIdMap, renderModule } from "./ids.ts";
-import { hashJson, readLock, writeLock } from "./lockfile.ts";
+import { buildAllEnvIdMaps, renderModule } from "./ids.ts";
+import { hashJson, type Lockfile, readLock, writeLock } from "./lockfile.ts";
 import { loadModule } from "./load-module.ts";
 import {
   createFlow,
@@ -17,26 +18,31 @@ import {
   editTemplate,
   findFlowByName,
   findTemplateByName,
-  getToken,
   publishFlow,
   uploadFlowJson,
 } from "./meta.ts";
-import { loadProject } from "./project.ts";
+import { loadProject, resolveToken } from "./project.ts";
 import { type CompiledFlow, compileFlowFile } from "./single-file.ts";
 
 interface CompiledApp {
   app: FlowsAppConfig;
   dir: string;
+  env: string;
+  wabaId: string;
   flows: CompiledFlow[];
   templates: CompiledTemplate[];
+}
+
+export interface ProjectOptions {
+  env?: string;
 }
 
 const DEFAULT_IDS_FILE = "whatsapp-flows.generated.ts";
 
 /** Compile every asset in the project, classifying each `.tsx` as a flow or a
  * message template (the latter export `template`). The module is loaded once. */
-async function compileAll(flowsDir: string): Promise<CompiledApp> {
-  const project = await loadProject(flowsDir);
+async function compileAll(flowsDir?: string, opts: ProjectOptions = {}): Promise<CompiledApp> {
+  const project = await loadProject(flowsDir, { env: opts.env });
   const flows: CompiledFlow[] = [];
   const templates: CompiledTemplate[] = [];
   for (const file of project.flowFiles) {
@@ -47,7 +53,14 @@ async function compileAll(flowsDir: string): Promise<CompiledApp> {
       flows.push(await compileFlowFile(file, project.app, mod));
     }
   }
-  return { app: project.app, dir: project.dir, flows, templates };
+  return {
+    app: project.app,
+    dir: project.dir,
+    env: project.env,
+    wabaId: project.wabaId,
+    flows,
+    templates,
+  };
 }
 
 function countLine(flows: CompiledFlow[], templates: CompiledTemplate[]): string {
@@ -58,8 +71,8 @@ function countLine(flows: CompiledFlow[], templates: CompiledTemplate[]): string
 }
 
 /** Validate every flow and template in the project. */
-export async function checkProject(flowsDir: string): Promise<void> {
-  const { flows, templates } = await compileAll(flowsDir);
+export async function checkProject(flowsDir?: string, opts: ProjectOptions = {}): Promise<void> {
+  const { flows, templates } = await compileAll(flowsDir, opts);
   for (const f of flows) console.log(`✓ ${f.name}: ${f.flow.screens.length} screen(s)`);
   for (const t of templates) console.log(`✓ ${t.name}: template (${t.language}, ${t.category})`);
   console.log(`✓ ${countLine(flows, templates)} valid`);
@@ -67,8 +80,12 @@ export async function checkProject(flowsDir: string): Promise<void> {
 
 /** Compile every asset to <flows>/.build/ (flows as <name>.json, templates as
  * <name>.template.json) for inspection. */
-export async function buildProject(flowsDir: string, outDir?: string): Promise<void> {
-  const { dir, flows, templates } = await compileAll(flowsDir);
+export async function buildProject(
+  flowsDir?: string,
+  outDir?: string,
+  opts: ProjectOptions = {},
+): Promise<void> {
+  const { dir, flows, templates } = await compileAll(flowsDir, opts);
   const out = outDir ? path.resolve(outDir) : path.join(dir, ".build");
   await mkdir(out, { recursive: true });
   for (const f of flows) {
@@ -86,8 +103,8 @@ export async function buildProject(flowsDir: string, outDir?: string): Promise<v
 }
 
 /** Print a compact outline of every flow and template in the project. */
-export async function inspectProject(flowsDir: string): Promise<void> {
-  const { flows, templates } = await compileAll(flowsDir);
+export async function inspectProject(flowsDir?: string, opts: ProjectOptions = {}): Promise<void> {
+  const { flows, templates } = await compileAll(flowsDir, opts);
   for (const f of flows) {
     console.log(
       `\n${f.name}  (v${f.flow.version}${f.categories ? `, ${f.categories.join("/")}` : ""})`,
@@ -112,18 +129,7 @@ export async function inspectProject(flowsDir: string): Promise<void> {
 
 export interface PushOptions {
   dryRun?: boolean;
-}
-
-/** Pull the single WABA id out of the loaded config; error clearly if unset. */
-function resolveWabaId(app: FlowsAppConfig): string {
-  const id = app.waba?.id?.trim();
-  if (!id) {
-    throw new FlowCompileError(
-      "No WABA id. Set `waba: { id: process.env.WHATSAPP_WABA_ID! }` in flows.config.ts " +
-        "and export WHATSAPP_WABA_ID in your env file (e.g. .env.local).",
-    );
-  }
-  return id;
+  env?: string;
 }
 
 type Action = "skip" | "create" | "update" | "edit";
@@ -143,18 +149,25 @@ interface Row {
  * Templates: create when absent (submitting for review), edit when changed,
  * skip unchanged. After a successful sync, write the typed ids module next to
  * flows.config.ts. { dryRun } prints the plan and writes nothing. */
-export async function pushProject(flowsDir: string, opts: PushOptions = {}): Promise<void> {
-  const { app, dir, flows, templates } = await compileAll(flowsDir);
-  const wabaId = resolveWabaId(app);
+export async function pushProject(flowsDir?: string, opts: PushOptions = {}): Promise<void> {
+  const { app, dir, env, wabaId, flows, templates } = await compileAll(flowsDir, { env: opts.env });
   const lock = await readLock(dir);
-  const token = opts.dryRun ? "" : getToken();
+  const token = opts.dryRun ? "" : await resolveToken(app, { env, wabaId });
 
-  const wabaLock = (lock.wabas[wabaId] ??= {});
+  const envLock = (lock.envs[env] ??= { wabaId, assets: {} });
+  if (envLock.wabaId !== wabaId) {
+    throw new FlowCompileError(
+      `Lock env "${env}" is pinned to WABA ${envLock.wabaId}, but flows.config.ts now ` +
+        `resolves it to ${wabaId}. If you intentionally re-pointed "${env}" at a new WABA, ` +
+        "remove that env from flows.lock.json and re-push.",
+    );
+  }
+  const assets = envLock.assets;
   const rows: Row[] = [];
 
   for (const flow of flows) {
     const hash = hashJson(flow.flow);
-    const entry = wabaLock[flow.name];
+    const entry = assets[flow.name];
     const unchanged = !!entry && entry.hash === hash;
 
     let action: Action;
@@ -181,7 +194,7 @@ export async function pushProject(flowsDir: string, opts: PushOptions = {}): Pro
       }
       await publishFlow(flowId!, token);
       const rev = (entry?.rev ?? 0) + 1;
-      wabaLock[flow.name] = { id: flowId!, rev, hash, kind: "flow" };
+      assets[flow.name] = { id: flowId!, rev, hash, kind: "flow" };
     }
 
     rows.push({
@@ -189,15 +202,16 @@ export async function pushProject(flowsDir: string, opts: PushOptions = {}): Pro
       name: flow.name,
       action,
       published: action !== "skip",
-      rev: wabaLock[flow.name]?.rev ?? entry?.rev,
+      rev: assets[flow.name]?.rev ?? entry?.rev,
       id: flowId,
     });
   }
 
   for (const tpl of templates) {
     const key = `tpl:${tpl.name}@${tpl.language}`;
+    resolveTemplateFlowRefs(tpl, assets, { dryRun: opts.dryRun });
     const hash = hashJson(tpl.payload);
-    const entry = wabaLock[key];
+    const entry = assets[key];
     const unchanged = !!entry && entry.hash === hash;
 
     let action: Action;
@@ -226,7 +240,7 @@ export async function pushProject(flowsDir: string, opts: PushOptions = {}): Pro
         status = "PENDING";
       }
       const rev = (entry?.rev ?? 0) + 1;
-      wabaLock[key] = { id: id!, rev, hash, kind: "template", status };
+      assets[key] = { id: id!, rev, hash, kind: "template", status };
     }
 
     rows.push({
@@ -234,7 +248,7 @@ export async function pushProject(flowsDir: string, opts: PushOptions = {}): Pro
       name: `${tpl.name} (${tpl.language})`,
       action,
       published: false,
-      rev: wabaLock[key]?.rev ?? entry?.rev,
+      rev: assets[key]?.rev ?? entry?.rev,
       id,
       status,
     });
@@ -242,22 +256,17 @@ export async function pushProject(flowsDir: string, opts: PushOptions = {}): Pro
 
   if (!opts.dryRun) {
     await writeLock(dir, lock);
-    await writeIdsModule(dir, app, wabaId, wabaLock);
+    await writeIdsModule(dir, app, lock);
   }
-  printSummary(rows, wabaId, opts);
+  printSummary(rows, env, wabaId, opts);
 }
 
-async function writeIdsModule(
-  dir: string,
-  app: FlowsAppConfig,
-  wabaId: string,
-  section: Record<string, import("./lockfile.ts").LockEntry>,
-): Promise<void> {
+async function writeIdsModule(dir: string, app: FlowsAppConfig, lock: Lockfile): Promise<void> {
   const relPath = app.generatedIdsPath ?? DEFAULT_IDS_FILE;
   const dest = path.isAbsolute(relPath) ? relPath : path.resolve(dir, relPath);
   await mkdir(path.dirname(dest), { recursive: true });
-  const map = buildIdMap(section);
-  await writeFile(dest, renderModule(map, wabaId), "utf8");
+  const all = buildAllEnvIdMaps(lock);
+  await writeFile(dest, renderModule(all, app.defaultEnv), "utf8");
   console.log(`✓ Wrote ids → ${path.relative(process.cwd(), dest)}`);
 }
 
@@ -268,9 +277,9 @@ const GLYPH: Record<Action, string> = {
   edit: "✎",
 };
 
-function printSummary(rows: Row[], wabaId: string, opts: PushOptions): void {
+function printSummary(rows: Row[], env: string, wabaId: string, opts: PushOptions): void {
   const prefix = opts.dryRun ? "(dry run) " : "";
-  console.log(`\n${prefix}push summary — WABA ${wabaId}`);
+  console.log(`\n${prefix}push summary — env ${env} (WABA ${wabaId})`);
   const nameW = Math.max(4, ...rows.map((r) => r.name.length));
   for (const r of rows) {
     const tail =

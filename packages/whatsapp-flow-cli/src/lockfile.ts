@@ -1,3 +1,4 @@
+import { FlowCompileError } from "whatsapp-flow-core";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
@@ -16,30 +17,56 @@ export interface LockEntry {
   status?: string;
 }
 
-export interface Lockfile {
-  version: number;
-  /** waba id -> asset key -> entry. Flow keys are the flow name; template
-   * keys are `tpl:<name>@<language>`. Asset ids differ per WABA. Keying by
-   * id (not label) means dev and prod checkouts share one committed lockfile. */
-  wabas: Record<string, Record<string, LockEntry>>;
+/** One env's locked state: which WABA it points at, plus its asset entries. */
+export interface EnvLock {
+  /** WABA id this env deploys to. */
+  wabaId: string;
+  /** asset key -> entry. Flow keys are the flow name; template keys are
+   * `tpl:<name>@<language>`. */
+  assets: Record<string, LockEntry>;
 }
 
+export interface Lockfile {
+  version: number;
+  /** env name -> { wabaId, assets }. Keying by env name (not raw WABA id) means
+   * one committed lockfile holds dev and prod state with stable, readable keys. */
+  envs: Record<string, EnvLock>;
+}
+
+export const LOCK_VERSION = 2;
 const LOCK_NAME = "flows.lock.json";
 
 export function lockPath(flowsDir: string): string {
   return path.join(flowsDir, LOCK_NAME);
 }
 
+/** True when a parsed lockfile object is in the legacy v1 (WABA-keyed) shape. */
+export function isLegacyLock(raw: unknown): boolean {
+  const obj = raw as { version?: number; envs?: unknown; wabas?: unknown };
+  return !!obj && (obj.version === 1 || (obj.wabas !== undefined && obj.envs === undefined));
+}
+
 export async function readLock(flowsDir: string): Promise<Lockfile> {
   const p = lockPath(flowsDir);
-  if (!existsSync(p)) return { version: 1, wabas: {} };
+  if (!existsSync(p)) return { version: LOCK_VERSION, envs: {} };
+  let raw: unknown;
   try {
-    const parsed = JSON.parse(await readFile(p, "utf8")) as Lockfile;
-    if (!parsed.wabas) parsed.wabas = {};
-    return parsed;
+    raw = JSON.parse(await readFile(p, "utf8"));
   } catch {
-    return { version: 1, wabas: {} };
+    return { version: LOCK_VERSION, envs: {} };
   }
+  if (isLegacyLock(raw)) {
+    throw new FlowCompileError(
+      "flows.lock.json is a v1 lockfile (keyed by raw WABA id). Upgrade it by hand: set " +
+        '"version": 2 and replace the top-level "wabas" map with an "envs" map, moving each ' +
+        "WABA id under the env name that targets it — " +
+        '`"envs": { "<env>": { "wabaId": "<id>", "assets": { …the old per-WABA map… } } }`. ' +
+        "See the README (Lockfile migration) for a before/after example.",
+    );
+  }
+  const parsed = raw as Lockfile;
+  if (!parsed.envs) parsed.envs = {};
+  return parsed;
 }
 
 export async function writeLock(flowsDir: string, lock: Lockfile): Promise<void> {

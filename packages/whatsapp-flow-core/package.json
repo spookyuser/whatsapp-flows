@@ -11,7 +11,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts --clean",
     "typecheck": "tsc --noEmit",
@@ -19,6 +21,6 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "ajv": "^8.17.1"
+    "ajv": "^8.20.0"
   }
 }
